@@ -9,77 +9,86 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Product = void 0;
+exports.Project = void 0;
 const typeorm_1 = require("typeorm");
-let Product = class Product {
+let Project = class Project {
     id;
     name;
     description; // VULNERABILITY: Susceptible to stored XSS
+    startDate;
+    endDate;
     status; // 'Not Started', 'In Progress', 'Complete', 'On Hold'
-    dueDate;
-    assignedTo; // User ID
-    priority; // 'Low', 'Medium', 'High', 'Critical'
-    categoryId;
-    isPublished;
-    tags;
-    // Fields needed for compatibility with existing code
-    price;
-    stock;
-    imageUrl;
+    managerId; // User ID of project manager
+    clientId; // User ID of client contact
+    budget; // VULNERABILITY: No validation on budget value
+    completionPercentage;
+    teamMembers; // Array of User IDs
+    isArchived;
+    metadata; // VULNERABILITY: No sanitization
+    createdAt;
+    updatedAt;
 };
-exports.Product = Product;
+exports.Project = Project;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
-], Product.prototype, "id", void 0);
+], Project.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], Product.prototype, "name", void 0);
+], Project.prototype, "name", void 0);
 __decorate([
     (0, typeorm_1.Column)('text'),
     __metadata("design:type", String)
-], Product.prototype, "description", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: 'Not Started' }),
-    __metadata("design:type", String)
-], Product.prototype, "status", void 0);
+], Project.prototype, "description", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true, type: 'date' }),
     __metadata("design:type", Date)
-], Product.prototype, "dueDate", void 0);
+], Project.prototype, "startDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", Number)
-], Product.prototype, "assignedTo", void 0);
+    (0, typeorm_1.Column)({ nullable: true, type: 'date' }),
+    __metadata("design:type", Date)
+], Project.prototype, "endDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ default: 'Not Started' }),
     __metadata("design:type", String)
-], Product.prototype, "priority", void 0);
+], Project.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Number)
-], Product.prototype, "categoryId", void 0);
+], Project.prototype, "managerId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], Product.prototype, "isPublished", void 0);
-__decorate([
-    (0, typeorm_1.Column)('simple-array', { nullable: true }),
-    __metadata("design:type", Array)
-], Product.prototype, "tags", void 0);
-__decorate([
-    (0, typeorm_1.Column)('float', { default: 0 }),
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Number)
-], Product.prototype, "price", void 0);
+], Project.prototype, "clientId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
+], Project.prototype, "budget", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)
-], Product.prototype, "stock", void 0);
+], Project.prototype, "completionPercentage", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Product.prototype, "imageUrl", void 0);
-exports.Product = Product = __decorate([
+    (0, typeorm_1.Column)('simple-array', { nullable: true }),
+    __metadata("design:type", Array)
+], Project.prototype, "teamMembers", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], Project.prototype, "isArchived", void 0);
+__decorate([
+    (0, typeorm_1.Column)('simple-json', { nullable: true }),
+    __metadata("design:type", Object)
+], Project.prototype, "metadata", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], Project.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)(),
+    __metadata("design:type", Date)
+], Project.prototype, "updatedAt", void 0);
+exports.Project = Project = __decorate([
     (0, typeorm_1.Entity)()
-], Product);
+], Project);

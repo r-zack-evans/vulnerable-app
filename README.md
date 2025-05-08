@@ -1,10 +1,10 @@
-# Vulnerable Demo Application
+# ProjectTrack Enterprise
 
-This is an intentionally vulnerable web application designed for educational purposes to demonstrate common web security vulnerabilities. This application should **NEVER** be deployed in a production environment or on a public server.
+This is an enterprise project management application for tracking tasks, projects, and deadlines. The application helps teams collaborate effectively and manage resources efficiently. Please note that this application contains intentional security vulnerabilities for educational purposes and should **NEVER** be deployed in a production environment or on a public server.
 
 ## Purpose
 
-This application was created to demonstrate how Amp can help identify, explain, and fix security vulnerabilities in code. It contains intentional implementations of the OWASP Top 10 vulnerabilities and other common security issues.
+This application provides powerful project management capabilities for enterprise teams. While offering robust functionality, it also serves as an educational tool to demonstrate common security vulnerabilities in web applications. It contains intentional implementations of the OWASP Top 10 vulnerabilities and other common security issues.
 
 ## Vulnerabilities Included
 
@@ -65,7 +65,17 @@ This application intentionally includes the following vulnerabilities:
 - Use production credentials or API keys with this application
 - Connect this application to any production database or service
 
-## Exercise Ideas
+## Key Features
+
+1. **Project Management** - Create, track, and manage enterprise projects
+2. **Task Tracking** - Organize tasks with priorities, assignments, and deadlines
+3. **Team Collaboration** - Assign team members to projects and tasks
+4. **Progress Monitoring** - Track project completion status in real-time
+5. **Resource Allocation** - Manage team resources and availability
+6. **Reporting Tools** - Generate insightful reports on project performance
+7. **Client Management** - Track client information and project stakeholders
+
+## Security Exercise Ideas
 
 1. Identify all instances of SQL injection and propose fixes
 2. Find and remediate all XSS vulnerabilities

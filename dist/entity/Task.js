@@ -9,77 +9,81 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Product = void 0;
+exports.Task = void 0;
 const typeorm_1 = require("typeorm");
-let Product = class Product {
+let Task = class Task {
     id;
-    name;
+    title;
     description; // VULNERABILITY: Susceptible to stored XSS
+    projectId;
     status; // 'Not Started', 'In Progress', 'Complete', 'On Hold'
     dueDate;
     assignedTo; // User ID
     priority; // 'Low', 'Medium', 'High', 'Critical'
-    categoryId;
-    isPublished;
-    tags;
-    // Fields needed for compatibility with existing code
-    price;
-    stock;
-    imageUrl;
+    estimatedHours;
+    actualHours;
+    parentTaskId; // For subtasks
+    order; // For ordering tasks in a list
+    dependsOn; // Task IDs this task depends on - VULNERABILITY: no validation
+    isCompleted;
 };
-exports.Product = Product;
+exports.Task = Task;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
-], Product.prototype, "id", void 0);
+], Task.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], Product.prototype, "name", void 0);
+], Task.prototype, "title", void 0);
 __decorate([
-    (0, typeorm_1.Column)('text'),
+    (0, typeorm_1.Column)('text', { nullable: true }),
     __metadata("design:type", String)
-], Product.prototype, "description", void 0);
+], Task.prototype, "description", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", Number)
+], Task.prototype, "projectId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 'Not Started' }),
     __metadata("design:type", String)
-], Product.prototype, "status", void 0);
+], Task.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true, type: 'date' }),
     __metadata("design:type", Date)
-], Product.prototype, "dueDate", void 0);
+], Task.prototype, "dueDate", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Number)
-], Product.prototype, "assignedTo", void 0);
+], Task.prototype, "assignedTo", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
-], Product.prototype, "priority", void 0);
+], Task.prototype, "priority", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, type: 'integer' }),
+    __metadata("design:type", Number)
+], Task.prototype, "estimatedHours", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, type: 'integer' }),
+    __metadata("design:type", Number)
+], Task.prototype, "actualHours", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Number)
-], Product.prototype, "categoryId", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], Product.prototype, "isPublished", void 0);
-__decorate([
-    (0, typeorm_1.Column)('simple-array', { nullable: true }),
-    __metadata("design:type", Array)
-], Product.prototype, "tags", void 0);
-__decorate([
-    (0, typeorm_1.Column)('float', { default: 0 }),
-    __metadata("design:type", Number)
-], Product.prototype, "price", void 0);
+], Task.prototype, "parentTaskId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)
-], Product.prototype, "stock", void 0);
+], Task.prototype, "order", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Product.prototype, "imageUrl", void 0);
-exports.Product = Product = __decorate([
+    (0, typeorm_1.Column)('simple-array', { nullable: true }),
+    __metadata("design:type", Array)
+], Task.prototype, "dependsOn", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], Task.prototype, "isCompleted", void 0);
+exports.Task = Task = __decorate([
     (0, typeorm_1.Entity)()
-], Product);
+], Task);

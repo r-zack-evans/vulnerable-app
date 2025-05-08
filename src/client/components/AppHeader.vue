@@ -2,12 +2,13 @@
   <header class="app-header">
     <div class="container header-container">
       <div class="logo">
-        <router-link to="/">Vulnerable Demo App</router-link>
+        <router-link to="/">ProjectTrack Enterprise</router-link>
       </div>
       <nav>
         <ul>
           <li><router-link to="/">Home</router-link></li>
-          <li><router-link to="/products">Products</router-link></li>
+          <li><router-link to="/projects">Projects</router-link></li>
+          <li><router-link to="/tasks">Tasks</router-link></li>
           
           <template v-if="user">
             <li><router-link to="/users/profile">Profile</router-link></li>

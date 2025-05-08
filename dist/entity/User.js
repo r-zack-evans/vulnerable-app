@@ -17,10 +17,14 @@ let User = class User {
     password; // VULNERABILITY: Stored as plaintext in some cases
     passwordHash;
     email;
-    role; // 'user' or 'admin'
+    role; // 'user' or 'admin' or 'manager' or 'client'
     resetToken;
     resetTokenExpiry;
+    apiKey; // VULNERABILITY: Sensitive data stored in plaintext
+    // For compatibility with existing code
     creditCardNumber; // VULNERABILITY: Sensitive data stored in plaintext
+    department;
+    jobTitle;
     profilePicture;
     isVerified;
     preferences;
@@ -61,7 +65,19 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
+], User.prototype, "apiKey", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
 ], User.prototype, "creditCardNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "department", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "jobTitle", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)

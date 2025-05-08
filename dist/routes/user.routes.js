@@ -50,7 +50,8 @@ router.post('/profile', auth_1.checkAuth, upload.single('profilePicture'), async
         // Update preferences
         user.preferences = {
             theme: theme || 'light',
-            notifications: notifications === 'on'
+            notifications: notifications === 'on',
+            dashboardLayout: req.body.dashboardLayout || 'default'
         };
         // Update profile picture if uploaded
         if (req.file) {

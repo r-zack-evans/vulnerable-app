@@ -1,15 +1,18 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Product {
+export class Task {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  name: string;
+  title: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   description: string; // VULNERABILITY: Susceptible to stored XSS
+
+  @Column()
+  projectId: number;
 
   @Column({ default: 'Not Started' })
   status: string; // 'Not Started', 'In Progress', 'Complete', 'On Hold'
@@ -23,22 +26,21 @@ export class Product {
   @Column({ nullable: true })
   priority: string; // 'Low', 'Medium', 'High', 'Critical'
 
-  @Column({ nullable: true })
-  categoryId: number;
+  @Column({ nullable: true, type: 'integer' })
+  estimatedHours: number;
 
-  @Column({ default: false })
-  isPublished: boolean;
+  @Column({ nullable: true, type: 'integer' })
+  actualHours: number;
+
+  @Column({ nullable: true })
+  parentTaskId: number; // For subtasks
+
+  @Column({ default: 0 })
+  order: number; // For ordering tasks in a list
 
   @Column('simple-array', { nullable: true })
-  tags: string[];
-  
-  // Fields needed for compatibility with existing code
-  @Column('float', { default: 0 })
-  price: number;
-  
-  @Column({ default: 0 })
-  stock: number;
-  
-  @Column({ nullable: true })
-  imageUrl: string;
+  dependsOn: number[]; // Task IDs this task depends on - VULNERABILITY: no validation
+
+  @Column({ default: false })
+  isCompleted: boolean;
 }

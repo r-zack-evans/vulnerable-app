@@ -1,9 +1,9 @@
 <template>
   <footer class="app-footer">
     <div class="container">
-      <p>&copy; {{ currentYear }} Vulnerable Demo App - For Educational Purposes Only</p>
-      <p>This application intentionally contains security vulnerabilities to demonstrate common web security issues.</p>
-      <p>Do not use this code in production environments.</p>
+      <p>&copy; {{ currentYear }} ProjectTrack Enterprise - For Demonstration Purposes Only</p>
+      <p>Enterprise project management solution for teams of all sizes.</p>
+      <p>This is a demo application and should not be used in production environments.</p>
     </div>
   </footer>
 </template>

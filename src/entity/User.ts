@@ -18,7 +18,7 @@ export class User {
   email: string;
 
   @Column({ default: 'user' })
-  role: string; // 'user' or 'admin'
+  role: string; // 'user' or 'admin' or 'manager' or 'client'
 
   @Column({ nullable: true })
   resetToken: string;
@@ -27,7 +27,17 @@ export class User {
   resetTokenExpiry: Date;
 
   @Column({ nullable: true })
+  apiKey: string; // VULNERABILITY: Sensitive data stored in plaintext
+  
+  // For compatibility with existing code
+  @Column({ nullable: true })
   creditCardNumber: string; // VULNERABILITY: Sensitive data stored in plaintext
+
+  @Column({ nullable: true })
+  department: string;
+
+  @Column({ nullable: true })
+  jobTitle: string;
 
   @Column({ nullable: true })
   profilePicture: string;
@@ -36,5 +46,5 @@ export class User {
   isVerified: boolean;
 
   @Column({ type: 'simple-json', nullable: true })
-  preferences: { theme: string; notifications: boolean };
+  preferences: { theme: string; notifications: boolean; dashboardLayout: string };
 }

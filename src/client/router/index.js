@@ -1,4 +1,5 @@
 import HomeView from '../views/HomeView.vue'
+import ProjectsView from '../views/ProjectsView.vue'
 
 export default [
   {
@@ -20,6 +21,36 @@ export default [
     path: '/error',
     name: 'error',
     component: () => import('../views/ErrorView.vue')
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/DashboardView.vue'),
+  },
+  {
+    path: '/projects',
+    name: 'projects',
+    component: ProjectsView,
+  },
+  {
+    path: '/projects/:id',
+    name: 'project-detail',
+    component: () => import('../views/ProjectDetailView.vue')
+  },
+  {
+    path: '/projects/:id/edit',
+    name: 'project-edit',
+    component: () => import('../views/ProjectDetailView.vue')
+  },
+  {
+    path: '/tasks',
+    name: 'tasks',
+    component: () => import('../views/TasksView.vue')
+  },
+  {
+    path: '/tasks/:id',
+    name: 'task-detail',
+    component: () => import('../views/TasksView.vue')
   },
   {
     path: '/admin',

@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt';
 import { getRepository } from 'typeorm';
 import { User } from '../entity/User';
 import { Product } from '../entity/Product';
+import { Project } from '../entity/Project';
+import { Task } from '../entity/Task';
 
 const router = express.Router();
 
@@ -109,6 +111,332 @@ router.post('/auth/register', async (req, res) => {
       error: 'Registration failed', 
       details: err.message,
       stack: err.stack 
+    });
+  }
+});
+
+// Projects API
+// Get all projects
+router.get('/projects', async (req, res) => {
+  try {
+    const projectRepository = getRepository(Project);
+    // Add proper ordering to always show most recently created projects first
+    const projects = await projectRepository.find({
+      order: {
+        id: 'DESC' // Newest projects first
+      }
+    });
+    console.log(`Fetched ${projects.length} projects from database`);
+    return res.json(projects);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred fetching projects',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Debug route to help diagnose API issues
+router.get('/debug/routes', (req, res) => {
+  const routes = [];
+  
+  // Extract all routes from the Express app
+  function print(path, layer) {
+    if (layer.route) {
+      layer.route.stack.forEach(print.bind(null, path.concat(split(layer.route.path))));
+    } else if (layer.name === 'router' && layer.handle.stack) {
+      layer.handle.stack.forEach(print.bind(null, path.concat(split(layer.regexp))));
+    } else if (layer.method) {
+      routes.push(`${layer.method.toUpperCase()} ${path.concat(split(layer.regexp)).filter(Boolean).join('/')}`);
+    }
+  }
+  
+  function split(thing) {
+    if (typeof thing === 'string') return thing.split('/');
+    else if (thing.fast_slash) return '';
+    else return thing.toString()
+      .replace('\\/?', '')
+      .replace('(?=\\/|$)', '$')
+      .split('/');
+  }
+  
+  require('express')()._router.stack.forEach(print.bind(null, []));
+  
+  return res.json({
+    routeCount: routes.length,
+    routes: routes
+  });
+});
+
+// Get project by ID
+router.get('/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectRepository = getRepository(Project);
+    
+    // VULNERABILITY: No validation on id parameter
+    const project = await projectRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    return res.json(project);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred fetching the project',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Create project
+router.post('/projects', async (req, res) => {
+  try {
+    const projectRepository = getRepository(Project);
+    const newProject = projectRepository.create(req.body);
+    await projectRepository.save(newProject);
+    return res.status(201).json(newProject);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred creating the project',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Update project with PUT
+router.put('/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectRepository = getRepository(Project);
+    const project = await projectRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Update project with new data
+    projectRepository.merge(project, req.body);
+    const updatedProject = await projectRepository.save(project);
+    
+    console.log(`Updated project ID ${id}:`, updatedProject);
+    return res.json(updatedProject);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred updating the project',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Update project with PATCH (alternative to PUT)
+router.patch('/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectRepository = getRepository(Project);
+    const project = await projectRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Update project with new data
+    projectRepository.merge(project, req.body);
+    const updatedProject = await projectRepository.save(project);
+    
+    console.log(`Updated project ID ${id} with PATCH:`, updatedProject);
+    return res.json(updatedProject);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred updating the project',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Delete project
+router.delete('/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectRepository = getRepository(Project);
+    const project = await projectRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    await projectRepository.remove(project);
+    return res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred deleting the project',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Get project tasks
+router.get('/projects/:id/tasks', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: No validation on id parameter
+    const tasks = await taskRepository.find({ where: { projectId: Number(id) } });
+    
+    return res.json(tasks);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred fetching project tasks',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Create task for project
+router.post('/projects/:id/tasks', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const projectRepository = getRepository(Project);
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: No validation on id parameter
+    const project = await projectRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // VULNERABILITY: Mass assignment, no validation
+    const newTask = taskRepository.create({
+      ...req.body,
+      projectId: Number(id)
+    });
+    
+    await taskRepository.save(newTask);
+    return res.status(201).json(newTask);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred creating the task',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Update task
+router.put('/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: No validation on id parameter
+    const task = await taskRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    
+    // VULNERABILITY: Mass assignment, no validation
+    taskRepository.merge(task, req.body);
+    const updatedTask = await taskRepository.save(task);
+    
+    return res.json(updatedTask);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred updating the task',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Delete task
+router.delete('/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: No validation on id parameter
+    const task = await taskRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    
+    await taskRepository.remove(task);
+    return res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred deleting the task',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Tasks API
+router.get('/tasks', async (req, res) => {
+  try {
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: Missing pagination could lead to DOS in large datasets
+    // VULNERABILITY: Not joining with Project to get project details
+    const tasks = await taskRepository.find({
+      order: {
+        id: 'DESC' // Newest tasks first
+      }
+    });
+    
+    return res.json(tasks);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred fetching tasks',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Get task by ID
+router.get('/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const taskRepository = getRepository(Task);
+    
+    // VULNERABILITY: No validation on id parameter
+    const task = await taskRepository.findOne({ where: { id: Number(id) } });
+    
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    
+    return res.json(task);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      error: 'An error occurred fetching the task',
+      details: err.message,
+      stack: err.stack
     });
   }
 });

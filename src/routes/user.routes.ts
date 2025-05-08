@@ -55,7 +55,8 @@ router.post('/profile', checkAuth, upload.single('profilePicture'), async (req, 
     // Update preferences
     user.preferences = { 
       theme: theme || 'light', 
-      notifications: notifications === 'on' 
+      notifications: notifications === 'on',
+      dashboardLayout: req.body.dashboardLayout || 'default'
     };
     
     // Update profile picture if uploaded

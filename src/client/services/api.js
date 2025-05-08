@@ -75,9 +75,41 @@ export const productsAPI = {
   searchProducts: (query) => apiClient.get(`/products/search?query=${query}`)
 };
 
+// Projects API
+export const projectsAPI = {
+  getAllProjects: () => apiClient.get('/projects'),
+  getProject: (id) => apiClient.get(`/projects/${id}`),
+  createProject: (projectData) => apiClient.post('/projects', projectData),
+  updateProject: (id, projectData) => {
+    // Ensure ID is a number and convert if needed
+    const projectId = typeof id === 'string' ? parseInt(id) : id;
+    console.log(`Making PUT request to /projects/${projectId} with data:`, projectData);
+    return apiClient.put(`/projects/${projectId}`, projectData);
+  },
+  deleteProject: (id) => apiClient.delete(`/projects/${id}`),
+  getProjectTasks: (id) => apiClient.get(`/projects/${id}/tasks`)
+};
+
+// Tasks API
+export const tasksAPI = {
+  getAllTasks: () => apiClient.get('/tasks'),
+  getTask: (id) => apiClient.get(`/tasks/${id}`),
+  createTask: (taskData) => apiClient.post('/tasks', taskData),
+  updateTask: (id, taskData) => {
+    // Ensure ID is a number and convert if needed
+    const taskId = typeof id === 'string' ? parseInt(id) : id;
+    return apiClient.put(`/tasks/${taskId}`, taskData);
+  },
+  deleteTask: (id) => apiClient.delete(`/tasks/${id}`),
+  updateTaskStatus: (id, status) => apiClient.patch(`/tasks/${id}/status`, { status }),
+  assignTask: (id, userId) => apiClient.patch(`/tasks/${id}/assign`, { userId })
+};
+
 // VULNERABILITY: No revocation or token handling
 export default {
   auth: authAPI,
   users: usersAPI,
-  products: productsAPI
+  products: productsAPI,
+  projects: projectsAPI,
+  tasks: tasksAPI
 };

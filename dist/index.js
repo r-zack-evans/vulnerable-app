@@ -14,6 +14,8 @@ const typeorm_1 = require("typeorm");
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const product_routes_1 = __importDefault(require("./routes/product.routes"));
+const project_routes_1 = __importDefault(require("./routes/project.routes"));
+const task_routes_1 = __importDefault(require("./routes/task.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const api_routes_1 = __importDefault(require("./routes/api.routes"));
 const vue_api_routes_1 = __importDefault(require("./routes/vue-api.routes"));
@@ -27,17 +29,25 @@ dotenv_1.default.config();
     synchronize: true, // VULNERABILITY: Automatic schema synchronization in production is a security risk
 }).then(() => {
     console.log('Database connected');
+    // Seed the database with example data
+    try {
+        const seedDatabase = require('../seed-db');
+        seedDatabase();
+    }
+    catch (seedError) {
+        console.log('Error seeding database:', seedError);
+    }
 }).catch(error => console.log('Database connection error: ', error));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // Vue frontend handles all views
 // Middleware
 app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
-// Serve Vue app from the vue directory as main application
-app.use(express_1.default.static(path_1.default.join(__dirname, 'public/vue')));
+// Serve Vue app from the public directory as main application
+app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
 // Catch-all route to serve the Vue SPA
-app.get(['/app/*', '/login', '/register', '/admin', '/products*'], (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, 'public/vue/index.html'));
+app.get(['/app/*', '/login', '/register', '/admin', '/products*', '/projects*', '/tasks*', '/dashboard'], (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, 'public/index.html'));
 });
 app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use(body_parser_1.default.json());
@@ -61,6 +71,8 @@ global.loginAttempts = loginAttempts;
 app.use('/auth', auth_routes_1.default);
 app.use('/users', user_routes_1.default);
 app.use('/products', product_routes_1.default);
+app.use('/projects', project_routes_1.default);
+app.use('/tasks', task_routes_1.default);
 app.use('/admin', admin_routes_1.default);
 app.use('/api', api_routes_1.default);
 app.use('/api/vue', vue_api_routes_1.default);
@@ -75,7 +87,7 @@ app.get('/try-vue', (req, res) => {
 // Serve Vue SPA for any non-API routes
 app.get('*', (req, res, next) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/auth')) {
-        return res.sendFile(path_1.default.join(__dirname, 'public/vue/index.html'));
+        return res.sendFile(path_1.default.join(__dirname, 'public/index.html'));
     }
     next();
 });
@@ -93,7 +105,7 @@ app.use((err, req, res, next) => {
         });
     }
     // For all other requests, send the Vue app to handle error display
-    res.status(500).sendFile(path_1.default.join(__dirname, 'public/vue/index.html'));
+    res.status(500).sendFile(path_1.default.join(__dirname, 'public/index.html'));
 });
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

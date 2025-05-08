@@ -9,6 +9,8 @@ import { createConnection } from 'typeorm';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import productRoutes from './routes/product.routes';
+import projectRoutes from './routes/project.routes';
+import taskRoutes from './routes/task.routes';
 import adminRoutes from './routes/admin.routes';
 import apiRoutes from './routes/api.routes';
 import vueApiRoutes from './routes/vue-api.routes';
@@ -24,6 +26,14 @@ createConnection({
   synchronize: true, // VULNERABILITY: Automatic schema synchronization in production is a security risk
 }).then(() => {
   console.log('Database connected');
+  
+  // Seed the database with example data
+  try {
+    const seedDatabase = require('../seed-db');
+    seedDatabase();
+  } catch (seedError) {
+    console.log('Error seeding database:', seedError);
+  }
 }).catch(error => console.log('Database connection error: ', error));
 
 const app = express();
@@ -34,12 +44,12 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve Vue app from the vue directory as main application
-app.use(express.static(path.join(__dirname, 'public/vue')));
+// Serve Vue app from the public directory as main application
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Catch-all route to serve the Vue SPA
-app.get(['/app/*', '/login', '/register', '/admin', '/products*'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/vue/index.html'));
+app.get(['/app/*', '/login', '/register', '/admin', '/products*', '/projects*', '/tasks*', '/dashboard'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -67,6 +77,8 @@ global.loginAttempts = loginAttempts;
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
+app.use('/projects', projectRoutes);
+app.use('/tasks', taskRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 app.use('/api/vue', vueApiRoutes);
@@ -84,7 +96,7 @@ app.get('/try-vue', (req, res) => {
 // Serve Vue SPA for any non-API routes
 app.get('*', (req, res, next) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/auth')) {
-    return res.sendFile(path.join(__dirname, 'public/vue/index.html'));
+    return res.sendFile(path.join(__dirname, 'public/index.html'));
   }
   next();
 });
@@ -105,7 +117,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   }
   
   // For all other requests, send the Vue app to handle error display
-  res.status(500).sendFile(path.join(__dirname, 'public/vue/index.html'));
+  res.status(500).sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 app.listen(PORT, () => {

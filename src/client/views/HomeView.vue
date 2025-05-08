@@ -2,37 +2,37 @@
   <BaseLayout>
     <section class="welcome">
       <h1>{{ message }}</h1>
-      <p>This application contains intentional security vulnerabilities for educational purposes.</p>
-      <p>Try to find and exploit the vulnerabilities!</p>
+      <p>Manage your enterprise projects with our comprehensive task management solution.</p>
+      <p>Track progress, assign resources, and meet your deadlines with confidence.</p>
       
       <div v-if="!user" class="auth-buttons">
         <Button @click="$router.push('/login')" variant="primary" text="Login" />
         <Button @click="$router.push('/register')" variant="secondary" text="Register" />
       </div>
       
-      <div class="ejs-app-link" style="margin-top: 20px;">
-        <Button @click="goToEjsVersion" variant="outline" text="Try the EJS version" />
+      <div v-if="user" class="dashboard-link" style="margin-top: 20px;">
+        <Button @click="$router.push('/projects')" variant="primary" text="Go to Dashboard" />
       </div>
     </section>
     
     <section class="features">
-      <h2>Features to Explore</h2>
+      <h2>Enterprise Features</h2>
       <div class="feature-grid">
         <div class="feature-card">
-          <h3>User Management</h3>
-          <p>Create accounts, update profiles, and explore user-related vulnerabilities.</p>
+          <h3>Task Management</h3>
+          <p>Create, assign, and track tasks across your organization with real-time updates.</p>
         </div>
         <div class="feature-card">
-          <h3>Product Catalog</h3>
-          <p>Browse products, add reviews, and search for items with potential injection flaws.</p>
+          <h3>Project Dashboard</h3>
+          <p>Get a comprehensive view of all your projects with status tracking and priority management.</p>
         </div>
         <div class="feature-card">
-          <h3>Admin Panel</h3>
-          <p>Manage users and products, access sensitive functions with potential security issues.</p>
+          <h3>Team Collaboration</h3>
+          <p>Assign team members to projects, manage permissions, and communicate effectively.</p>
         </div>
         <div class="feature-card">
-          <h3>API Endpoints</h3>
-          <p>Interact with REST API endpoints that may contain various vulnerabilities.</p>
+          <h3>Advanced Reporting</h3>
+          <p>Generate detailed reports on project progress, resource allocation, and deadline tracking.</p>
         </div>
       </div>
     </section>
@@ -60,7 +60,7 @@ export default {
   },
   data() {
     return {
-      message: 'Welcome to Vulnerable Demo App',
+      message: 'Welcome to ProjectTrack Enterprise',
       error: null,
       notification: null
     }
@@ -102,9 +102,9 @@ export default {
     this.fetchProducts()
   },
   methods: {
-    goToEjsVersion() {
-      // Redirect to the EJS version (root path)
-      window.location.href = '/'
+    goToDashboard() {
+      // Redirect to the project dashboard
+      this.$router.push('/projects')
     },
     async fetchProducts() {
       this.error = null
