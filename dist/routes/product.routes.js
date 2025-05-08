@@ -27,14 +27,18 @@ router.get('/', async (req, res) => {
     try {
         const productRepository = (0, typeorm_1.getRepository)(Product_1.Product);
         const products = await productRepository.find({ where: { isPublished: true } });
-        res.render('products/index', {
+        res.json({
             products,
-            user: req.session.user,
+            user: req.session.user ? {
+                id: req.session.user.id,
+                username: req.session.user.username,
+                role: req.session.user.role
+            } : null,
             query: req.query.q || ''
         });
     }
     catch (err) {
-        res.status(500).render('error', { message: err.message });
+        res.status(500).json({ error: "Server error", message: err.message, stack: err.stack });
     }
 });
 // Search products
@@ -43,21 +47,25 @@ router.get('/search', async (req, res) => {
         const { q } = req.query;
         const productRepository = (0, typeorm_1.getRepository)(Product_1.Product);
         if (!q) {
-            return res.redirect('/products');
+            return res.json({ products: [], message: 'No search query provided' });
         }
         // VULNERABILITY: SQL injection in search query
         // VULNERABILITY: XSS in search results
         const products = await productRepository.query(`SELECT * FROM product WHERE name LIKE '%${q}%' OR description LIKE '%${q}%' AND isPublished = 1`);
-        res.render('products/search', {
+        res.json({
             products,
-            user: req.session.user,
+            user: req.session.user ? {
+                id: req.session.user.id,
+                username: req.session.user.username,
+                role: req.session.user.role
+            } : null,
             query: q,
-            // VULNERABILITY: Reflected XSS by directly passing query to template
+            // VULNERABILITY: Reflected XSS by directly passing query to response
             searchMessage: `Search results for: ${q}`
         });
     }
     catch (err) {
-        res.status(500).render('error', { message: err.message });
+        res.status(500).json({ error: "Server error", message: err.message, stack: err.stack });
     }
 });
 // Show product details
@@ -68,26 +76,36 @@ router.get('/:id', async (req, res) => {
         const reviewRepository = (0, typeorm_1.getRepository)(Review_1.Review);
         const product = await productRepository.findOne({ where: { id: parseInt(id) } });
         if (!product) {
-            return res.status(404).render('error', { message: 'Product not found' });
+            return res.status(404).json({ error: 'Product not found' });
         }
         // Get product reviews
         const reviews = await reviewRepository.query(`SELECT r.*, u.username FROM review r 
        LEFT JOIN user u ON r.userId = u.id 
        WHERE r.productId = ${id}`);
-        res.render('products/show', {
+        res.json({
             product,
             reviews,
-            user: req.session.user
+            user: req.session.user ? {
+                id: req.session.user.id,
+                username: req.session.user.username,
+                role: req.session.user.role
+            } : null
         });
     }
     catch (err) {
-        res.status(500).render('error', { message: err.message });
+        res.status(500).json({ error: "Server error", message: err.message, stack: err.stack });
     }
 });
 // Create product form (admin only)
 router.get('/admin/create', auth_1.checkAuth, (req, res) => {
     // VULNERABILITY: No admin role verification, just checks for any login
-    res.render('products/create', { user: req.session.user });
+    res.json({
+        user: req.session.user ? {
+            id: req.session.user.id,
+            username: req.session.user.username,
+            role: req.session.user.role
+        } : null
+    });
 });
 // Store new product (admin only)
 router.post('/admin/create', auth_1.checkAuth, upload.single('image'), async (req, res) => {
@@ -110,10 +128,10 @@ router.post('/admin/create', auth_1.checkAuth, upload.single('image'), async (re
             product.imageUrl = `/uploads/products/${req.file.filename}`;
         }
         await productRepository.save(product);
-        res.redirect('/products');
+        res.status(201).json({ success: true, product });
     }
     catch (err) {
-        res.status(500).render('error', { message: err.message });
+        res.status(500).json({ error: "Server error", message: err.message, stack: err.stack });
     }
 });
 // Add review
@@ -130,10 +148,10 @@ router.post('/:id/reviews', auth_1.checkAuth, async (req, res) => {
         review.content = content; // VULNERABILITY: Stored XSS
         review.rating = parseInt(rating);
         await reviewRepository.save(review);
-        res.redirect(`/products/${id}`);
+        res.status(201).json({ success: true, review });
     }
     catch (err) {
-        res.status(500).render('error', { message: err.message });
+        res.status(500).json({ error: "Server error", message: err.message, stack: err.stack });
     }
 });
 exports.default = router;

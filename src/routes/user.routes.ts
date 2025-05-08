@@ -27,12 +27,12 @@ router.get('/profile', checkAuth, async (req, res) => {
     const user = await userRepository.findOne({ where: { id: req.session.user.id } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json('profile', { user });
+    res.json({ user });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -45,7 +45,7 @@ router.post('/profile', checkAuth, upload.single('profilePicture'), async (req, 
     const user = await userRepository.findOne({ where: { id: req.session.user.id } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // VULNERABILITY: No validation on inputs
@@ -73,15 +73,15 @@ router.post('/profile', checkAuth, upload.single('profilePicture'), async (req, 
       role: user.role
     };
     
-    res.redirect('/users/profile');
+    res.status(200).json({ success: true });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
 // Display user settings
 router.get('/settings', checkAuth, (req, res) => {
-  res.json('settings', { user: req.session.user });
+  res.json({ user: req.session.user });
 });
 
 // Update user settings
@@ -93,7 +93,7 @@ router.post('/settings', checkAuth, async (req, res) => {
     const user = await userRepository.findOne({ where: { id: req.session.user.id } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // VULNERABILITY: Weak password requirements - no length or complexity check
@@ -117,7 +117,7 @@ router.post('/settings', checkAuth, async (req, res) => {
       }
       
       if (!passwordValid) {
-        return res.json('settings', { 
+        return res.json({ 
           user: req.session.user, 
           error: 'Current password is incorrect' 
         });
@@ -132,12 +132,12 @@ router.post('/settings', checkAuth, async (req, res) => {
     
     await userRepository.save(user);
     
-    res.json('settings', { 
+    res.json({ 
       user: req.session.user, 
       message: 'Settings updated successfully' 
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -152,13 +152,13 @@ router.get('/view/:id', async (req, res) => {
     const user = await userRepository.findOne({ where: { id: parseInt(id) } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // VULNERABILITY: Exposing sensitive information
-    res.json('user-view', { profile: user, currentUser: req.session.user });
+    res.json({ profile: user, currentUser: req.session.user });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 

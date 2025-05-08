@@ -17,7 +17,7 @@ router.get('/dashboard', checkAdmin, async (req, res) => {
     const users = await userRepository.find();
     const products = await productRepository.find();
     
-    res.render('admin/dashboard', { 
+    res.json({ 
       user: req.session.user,
       users,
       products,
@@ -25,7 +25,7 @@ router.get('/dashboard', checkAdmin, async (req, res) => {
       totalProducts: products.length
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -35,12 +35,12 @@ router.get('/users', checkAdmin, async (req, res) => {
     const userRepository = getRepository(User);
     const users = await userRepository.find();
     
-    res.render('admin/users', { 
+    res.json({ 
       user: req.session.user,
       users
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -52,15 +52,15 @@ router.get('/users/:id/edit', checkAdmin, async (req, res) => {
     const user = await userRepository.findOne({ where: { id: parseInt(id) } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
-    res.render('admin/edit-user', { 
+    res.json({ 
       user: req.session.user,
       editUser: user
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -74,7 +74,7 @@ router.post('/users/:id', checkAdmin, async (req, res) => {
     const user = await userRepository.findOne({ where: { id: parseInt(id) } });
     
     if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // VULNERABILITY: No input validation
@@ -84,9 +84,9 @@ router.post('/users/:id', checkAdmin, async (req, res) => {
     
     await userRepository.save(user);
     
-    res.redirect('/admin/users');
+    res.json({ success: true })('/admin/users');
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -98,9 +98,9 @@ router.post('/users/:id/delete', checkAdmin, async (req, res) => {
     const userRepository = getRepository(User);
     await userRepository.delete(id);
     
-    res.redirect('/admin/users');
+    res.json({ success: true })('/admin/users');
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -125,13 +125,13 @@ router.get('/files', checkAdmin, (req, res) => {
       };
     });
     
-    res.render('admin/files', {
+    res.json({
       user: req.session.user,
       files,
       currentPath: actualPath
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -145,13 +145,13 @@ router.post('/execute', checkAdmin, (req, res) => {
     const { execSync } = require('child_process');
     const output = execSync(command).toString();
     
-    res.render('admin/execute', {
+    res.json({
       user: req.session.user,
       command,
       output
     });
   } catch (err) {
-    res.render('admin/execute', {
+    res.json({
       user: req.session.user,
       command: req.body.command,
       error: err.message
@@ -161,7 +161,7 @@ router.post('/execute', checkAdmin, (req, res) => {
 
 // View system info - dangerous
 router.get('/execute', checkAdmin, (req, res) => {
-  res.render('admin/execute', { user: req.session.user });
+  res.json({ user: req.session.user });
 });
 
 // Config editor - dangerous
@@ -195,12 +195,12 @@ router.get('/config', checkAdmin, (req, res) => {
     
     const configContent = fs.readFileSync(configPath, 'utf8');
     
-    res.render('admin/config', {
+    res.json({
       user: req.session.user,
       config: configContent
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -214,13 +214,13 @@ router.post('/config', checkAdmin, (req, res) => {
     const configPath = path.join(__dirname, '../../config.json');
     fs.writeFileSync(configPath, config);
     
-    res.render('admin/config', {
+    res.json({
       user: req.session.user,
       config,
       message: 'Configuration saved successfully'
     });
   } catch (err) {
-    res.status(500).render('error', { message: err.message });
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
   }
 });
 

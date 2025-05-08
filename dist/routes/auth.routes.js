@@ -32,17 +32,22 @@ router.post('/register', async (req, res) => {
             user.passwordHash = null;
         }
         await userRepository.save(user);
-        res.redirect('/auth/login?message=Registration successful');
+        // Return JSON response instead of redirect
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful'
+        });
     }
     catch (err) {
-        res.render('register', { error: 'Registration failed' });
+        console.error('Registration error:', err);
+        res.status(400).json({
+            success: false,
+            error: 'Registration failed',
+            details: err.message
+        });
     }
 });
-// Display login form
-router.get('/login', (req, res) => {
-    const message = req.query.message;
-    res.render('login', { message });
-});
+// Login endpoint now only used by API
 // Process login
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -55,7 +60,7 @@ router.post('/login', async (req, res) => {
         const rawQuery = `SELECT * FROM user WHERE username = '${username}'`;
         const user = await userRepository.query(rawQuery);
         if (user.length === 0) {
-            return res.render('login', { error: 'Invalid username or password' });
+            return res.status(401).json({ error: 'Invalid username or password' });
         }
         let isValidPassword = false;
         // Check if we have a plaintext password or a hashed password
@@ -69,7 +74,7 @@ router.post('/login', async (req, res) => {
         }
         if (!isValidPassword) {
             // VULNERABILITY: No rate limiting on failed attempts
-            return res.render('login', { error: 'Invalid username or password' });
+            return res.status(401).json({ error: 'Invalid username or password' });
         }
         // VULNERABILITY: Insecure JWT implementation
         const token = jsonwebtoken_1.default.sign({ id: user[0].id, username: user[0].username, role: user[0].role }, 'supersecretkey', // VULNERABILITY: Hardcoded secret
@@ -85,11 +90,24 @@ router.post('/login', async (req, res) => {
             httpOnly: false, // VULNERABILITY: Accessible via JavaScript
             secure: false // VULNERABILITY: Transmitted over HTTP
         });
-        res.redirect('/');
+        // Return user data and token
+        res.json({
+            token,
+            user: {
+                id: user[0].id,
+                username: user[0].username,
+                role: user[0].role,
+                email: user[0].email
+            }
+        });
     }
     catch (err) {
         console.error(err);
-        res.render('login', { error: 'Login failed' });
+        res.status(500).json({
+            error: 'Login failed',
+            details: err.message,
+            stack: err.stack // VULNERABILITY: Exposing stack trace
+        });
     }
 });
 // Password reset request
@@ -100,7 +118,7 @@ router.post('/forgot-password', async (req, res) => {
         const user = await userRepository.findOne({ where: { email } });
         if (!user) {
             // VULNERABILITY: User enumeration - different response when user exists
-            return res.render('forgot-password', { error: 'No user with that email' });
+            return res.status(404).json({ error: 'No user with that email' });
         }
         // Generate reset token (insecurely)
         // VULNERABILITY: Predictable token
@@ -109,22 +127,28 @@ router.post('/forgot-password', async (req, res) => {
         user.resetToken = resetToken;
         user.resetTokenExpiry = resetTokenExpiry;
         await userRepository.save(user);
-        // VULNERABILITY: Token exposed in URL
-        res.render('forgot-password', {
+        // VULNERABILITY: Token exposed in response
+        res.json({
             message: 'Password reset link sent',
-            // In a real app, this would be emailed, not shown on screen
-            debugLink: `/auth/reset-password?token=${resetToken}&email=${email}`
+            // VULNERABILITY: Reset token sent in response
+            resetToken: resetToken,
+            email: email,
+            resetUrl: `/auth/reset-password?token=${resetToken}&email=${email}`
         });
     }
     catch (err) {
         console.error(err);
-        res.render('forgot-password', { error: 'Password reset failed' });
+        res.status(500).json({
+            error: 'Password reset failed',
+            details: err.message
+        });
     }
 });
 // Logout
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     req.session.destroy(() => {
-        res.redirect('/');
+        res.clearCookie('auth_token');
+        res.json({ success: true, message: 'Logged out successfully' });
     });
 });
 exports.default = router;

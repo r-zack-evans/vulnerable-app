@@ -30,9 +30,7 @@ dotenv_1.default.config();
 }).catch(error => console.log('Database connection error: ', error));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
-// Set up view engine
-app.set('view engine', 'ejs');
-app.set('views', path_1.default.join(__dirname, 'views'));
+// Vue frontend handles all views
 // Middleware
 app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
 // Serve Vue app from the vue directory as main application
