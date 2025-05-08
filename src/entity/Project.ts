@@ -1,7 +1,25 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
+// Type for team member object
+type TeamMemberInfo = {
+  id: number;
+  username: string;
+  department?: string;
+  jobTitle?: string;
+};
+
+// Virtual properties for API responses
+type VirtualProperties = {
+  ownerName?: string;
+  ownerRole?: string;
+  ownerDepartment?: string;
+  teamMembersDetails?: TeamMemberInfo[];
+  teamMembersCount?: number;
+  additionalMembersCount?: number;
+};
+
 @Entity()
-export class Project {
+export class Project implements VirtualProperties {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -24,6 +42,9 @@ export class Project {
   managerId: number; // User ID of project manager
 
   @Column({ nullable: true })
+  ownerId: number; // User ID of project owner
+
+  @Column({ nullable: true })
   clientId: number; // User ID of client contact
 
   @Column({ nullable: true })
@@ -33,7 +54,7 @@ export class Project {
   completionPercentage: number;
 
   @Column('simple-array', { nullable: true })
-  teamMembers: number[]; // Array of User IDs
+  teamMembers: number[] | string; // Array of User IDs or comma-separated string
 
   @Column({ default: false })
   isArchived: boolean;
@@ -46,4 +67,12 @@ export class Project {
   
   @UpdateDateColumn()
   updatedAt: Date;
+  
+  // Virtual properties that will be populated by the API
+  ownerName?: string;
+  ownerRole?: string;
+  ownerDepartment?: string;
+  teamMembersDetails?: TeamMemberInfo[];
+  teamMembersCount?: number;
+  additionalMembersCount?: number;
 }

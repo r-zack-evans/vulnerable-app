@@ -19,14 +19,22 @@ let Project = class Project {
     endDate;
     status; // 'Not Started', 'In Progress', 'Complete', 'On Hold'
     managerId; // User ID of project manager
+    ownerId; // User ID of project owner
     clientId; // User ID of client contact
     budget; // VULNERABILITY: No validation on budget value
     completionPercentage;
-    teamMembers; // Array of User IDs
+    teamMembers; // Array of User IDs or comma-separated string
     isArchived;
     metadata; // VULNERABILITY: No sanitization
     createdAt;
     updatedAt;
+    // Virtual properties that will be populated by the API
+    ownerName;
+    ownerRole;
+    ownerDepartment;
+    teamMembersDetails;
+    teamMembersCount;
+    additionalMembersCount;
 };
 exports.Project = Project;
 __decorate([
@@ -60,6 +68,10 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Number)
+], Project.prototype, "ownerId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
 ], Project.prototype, "clientId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
@@ -71,7 +83,7 @@ __decorate([
 ], Project.prototype, "completionPercentage", void 0);
 __decorate([
     (0, typeorm_1.Column)('simple-array', { nullable: true }),
-    __metadata("design:type", Array)
+    __metadata("design:type", Object)
 ], Project.prototype, "teamMembers", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: false }),

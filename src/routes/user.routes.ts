@@ -163,4 +163,33 @@ router.get('/view/:id', async (req, res) => {
   }
 });
 
+// Get user by ID (used for project owners, managers, etc.)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // VULNERABILITY: No proper authorization check
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOne({ where: { id: parseInt(id) } });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Return limited information about the user
+    res.json({
+      profile: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        jobTitle: user.jobTitle
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error', message: err.message, stack: err.stack });
+  }
+});
+
 export default router;

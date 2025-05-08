@@ -62,6 +62,116 @@
             </div>
           </div>
           
+          <div class="form-group">
+            <label for="ownerId">Project Owner</label>
+            <div class="owner-search">
+              <input 
+                type="text" 
+                id="ownerSearch"
+                v-model="ownerSearch" 
+                @input="searchOwner"
+                placeholder="Search for owner by username or ID..."
+                class="search-input"
+              />
+              
+              <div v-if="ownerSearch && ownerSearchResults.length > 0" class="owner-search-results">
+                <div 
+                  v-for="user in ownerSearchResults" 
+                  :key="user.id" 
+                  class="owner-search-item"
+                  @click="selectOwner(user)"
+                >
+                  <span class="owner-avatar">
+                    <i class="fas fa-user"></i>
+                  </span>
+                  <div class="owner-info">
+                    <span class="owner-username"><strong>{{ user.username }}</strong></span>
+                    <span class="owner-position">{{ user.department }} - {{ user.jobTitle }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="ownerSearch && ownerSearchResults.length === 0" class="no-results">
+                No users found matching "{{ ownerSearch }}"
+              </div>
+              
+              <div v-if="editForm.ownerId" class="selected-owner">
+                <div class="owner-badge">
+                  <span class="owner-badge-avatar">
+                    <i class="fas fa-user-shield"></i>
+                  </span>
+                  <span class="owner-badge-info">Owner: {{ getOwnerName() }}</span>
+                  <button type="button" class="clear-owner" @click="clearOwner()" title="Remove owner">&times;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group team-members-section">
+            <label>Team Members</label>
+            <div v-if="usersLoading" class="loading-indicator">Loading users...</div>
+            <div v-else>
+              <!-- Search input for finding team members -->
+              <div class="team-members-search">
+                <input 
+                  type="text" 
+                  v-model="teamMemberSearch" 
+                  @input="searchTeamMembers"
+                  placeholder="Search by username or ID..."
+                  class="search-input"
+                />
+              </div>
+              
+              <!-- Display search results when searching -->
+              <div v-if="teamMemberSearch && filteredUsers.length > 0" class="search-results">
+                <div v-for="user in filteredUsers" :key="user.id" class="search-result-item">
+                  <label>
+                    <input 
+                      type="checkbox" 
+                      :value="user.id" 
+                      v-model="editForm.teamMembers" 
+                      :disabled="user.id === editForm.ownerId"
+                    />
+                    <strong>{{ user.username }}</strong> ({{ user.department }} - {{ user.jobTitle }})
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Show all users when not searching -->
+              <div v-if="!teamMemberSearch" class="team-members-list">
+                <div v-for="user in users" :key="user.id" class="team-member-item">
+                  <label>
+                    <input 
+                      type="checkbox" 
+                      :value="user.id" 
+                      v-model="editForm.teamMembers" 
+                      :disabled="user.id === editForm.ownerId"
+                    />
+                    {{ user.username }} ({{ user.department }} - {{ user.jobTitle }})
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Show "no results" when search returns nothing -->
+              <div v-if="teamMemberSearch && filteredUsers.length === 0" class="no-results">
+                No users found matching "{{ teamMemberSearch }}"
+              </div>
+              
+              <!-- Selected members count and badges -->
+              <div class="selected-members">
+                <div class="selected-count">
+                  {{ editForm.teamMembers.length }} team member(s) selected
+                </div>
+                <div v-if="editForm.teamMembers.length > 0" class="selected-badges">
+                  <div v-for="memberId in editForm.teamMembers" :key="memberId" class="selected-badge">
+                    {{ getUsernameById(memberId) }}
+                    <span class="remove-badge" @click="removeTeamMember(memberId)">&times;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- VULNERABILITY: Allowing direct edit of sensitive budget information -->
           <div class="form-group">
             <label for="budget">Budget ($)</label>
@@ -122,6 +232,62 @@
               <div class="date-item">
                 <span class="date-label">End Date:</span>
                 <span class="date-value">{{ formatDate(project.endDate) }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-section owner-section">
+            <h3>Project Owner</h3>
+            <div class="owner-info">
+              <div v-if="project.ownerName" class="owner-profile">
+                <div class="owner-profile-avatar">
+                  <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="owner-profile-details">
+                  <span class="owner-value">{{ project.ownerName }}</span>
+                  <div class="owner-meta-details">
+                    <div v-if="project.ownerRole" class="owner-role">{{ project.ownerRole }}</div>
+                    <div v-if="project.ownerDepartment" class="owner-meta">{{ project.ownerDepartment }}</div>
+                  </div>
+                </div>
+              </div>
+              <span v-else-if="project.ownerId" class="owner-value">User ID: {{ project.ownerId }}</span>
+              <div v-else class="no-owner">
+                <i class="fas fa-user-slash"></i>
+                <span>No owner assigned</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-section team-section">
+            <h3>Team Members</h3>
+            <div class="team-members-info">
+              <div v-if="(!project.teamMembers || project.teamMembers.length === 0) && (!project.teamMembersDetails || project.teamMembersDetails.length === 0)" class="no-team">
+                No team members assigned to this project.
+              </div>
+              <div v-else-if="project.teamMembersDetails && project.teamMembersDetails.length > 0" class="team-list">
+                <div v-for="member in project.teamMembersDetails" :key="member.id" class="team-member">
+                  <span class="team-member-avatar">
+                    <i class="fas fa-user"></i>
+                  </span>
+                  <span class="team-member-details">
+                    <span class="team-member-name">{{ member.username }}</span>
+                    <span v-if="member.jobTitle" class="team-member-job">{{ member.jobTitle }}</span>
+                  </span>
+                </div>
+                <div v-if="project.additionalMembersCount > 0" class="additional-members">
+                  +{{ project.additionalMembersCount }} more team member(s)
+                </div>
+              </div>
+              <div v-else class="team-list">
+                <div v-for="memberId in getTeamMemberIds()" :key="memberId" class="team-member">
+                  <span class="team-member-avatar">
+                    <i class="fas fa-user"></i>
+                  </span>
+                  <span class="team-member-details">
+                    <span class="team-member-name">{{ getMemberName(memberId) }}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -310,7 +476,7 @@
 <script>
 import BaseLayout from '../components/BaseLayout.vue'
 import Button from '../components/Button.vue'
-import { projectsAPI } from '../services/api'
+import { projectsAPI, usersAPI } from '../services/api'
 import axios from 'axios' // VULNERABILITY: Direct use of axios instead of through a service
 
 export default {
@@ -323,6 +489,12 @@ export default {
     return {
       project: {},
       tasks: [],
+      users: [], // Store all users for team member selection
+      usersLoading: false, // Track loading state of users
+      teamMemberSearch: '', // Search term for finding team members
+      filteredUsers: [], // Filtered users based on search
+      ownerSearch: '', // Search term for finding project owner
+      ownerSearchResults: [], // Search results for owner search
       loading: true,
       error: null,
       tasksLoading: true,
@@ -337,6 +509,8 @@ export default {
         status: 'Not Started',
         completionPercentage: 0,
         budget: 0,
+        ownerId: null,
+        teamMembers: [], // Array of user IDs that are assigned to the project
         clientNotes: '',
         internalNotes: ''
       },
@@ -408,6 +582,177 @@ export default {
     }
   },
   methods: {
+    // Get team member IDs as an array of numbers
+    getTeamMemberIds() {
+      if (!this.project.teamMembers) {
+        return [];
+      }
+      
+      // Handle array or comma-separated string
+      if (Array.isArray(this.project.teamMembers)) {
+        return this.project.teamMembers.map(id => parseInt(id));
+      } else if (typeof this.project.teamMembers === 'string') {
+        return this.project.teamMembers.split(',').map(id => parseInt(id.trim()));
+      }
+      
+      return [];
+    },
+    
+    // Search for project owner by username or ID
+    searchOwner() {
+      if (!this.ownerSearch.trim()) {
+        this.ownerSearchResults = [];
+        return;
+      }
+
+      const searchTerm = this.ownerSearch.toLowerCase().trim();
+      
+      // Make sure users are loaded first
+      if (this.users.length === 0) {
+        this.fetchUsers().then(() => this.performOwnerSearch(searchTerm));
+      } else {
+        this.performOwnerSearch(searchTerm);
+      }
+    },
+    
+    // Perform the actual owner search
+    performOwnerSearch(searchTerm) {
+      // Prioritize manager role users in search results
+      this.ownerSearchResults = this.users.filter(user => {
+        // Match by username
+        if (user.username.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Match by user ID (if search term is a number)
+        if (!isNaN(searchTerm) && user.id === parseInt(searchTerm)) {
+          return true;
+        }
+        
+        // Match by department or job title
+        if (user.department && user.department.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        if (user.jobTitle && user.jobTitle.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      // Sort results to show managers first, then admins, then regular users
+      this.ownerSearchResults.sort((a, b) => {
+        // Managers first
+        if (a.role === 'manager' && b.role !== 'manager') return -1;
+        if (b.role === 'manager' && a.role !== 'manager') return 1;
+        
+        // Then admins
+        if (a.role === 'admin' && b.role !== 'admin') return -1;
+        if (b.role === 'admin' && a.role !== 'admin') return 1;
+        
+        // Then alphabetically by username
+        return a.username.localeCompare(b.username);
+      });
+    },
+    
+    
+    // Select a user as project owner
+    selectOwner(user) {
+      this.editForm.ownerId = user.id;
+      this.ownerSearch = '';
+      this.ownerSearchResults = [];
+      
+      // If selected as owner, remove from team members if present
+      if (this.editForm.teamMembers.includes(user.id)) {
+        this.removeTeamMember(user.id);
+      }
+    },
+    
+    // Clear the selected owner
+    clearOwner() {
+      this.editForm.ownerId = null;
+    },
+    
+    // Get the name of the selected owner
+    getOwnerName() {
+      if (!this.editForm.ownerId) return '';
+      
+      const owner = this.users.find(u => u.id === this.editForm.ownerId);
+      if (owner) {
+        // Format nicely with username and role info
+        let roleInfo = '';
+        
+        if (owner.jobTitle) {
+          roleInfo += owner.jobTitle;
+        }
+        
+        if (owner.department) {
+          roleInfo += roleInfo ? ` (${owner.department})` : owner.department;
+        }
+        
+        return roleInfo ? `${owner.username} - ${roleInfo}` : owner.username;
+      }
+      
+      return `User ${this.editForm.ownerId}`;
+    },
+    
+    // Search for team members by username or ID
+    searchTeamMembers() {
+      if (!this.teamMemberSearch.trim()) {
+        this.filteredUsers = [];
+        return;
+      }
+
+      const searchTerm = this.teamMemberSearch.toLowerCase().trim();
+      
+      this.filteredUsers = this.users.filter(user => {
+        // Match by username
+        if (user.username.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Match by user ID (if search term is a number)
+        if (!isNaN(searchTerm) && user.id === parseInt(searchTerm)) {
+          return true;
+        }
+        
+        // Match by department or job title for more flexible search
+        if (user.department && user.department.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        if (user.jobTitle && user.jobTitle.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        return false;
+      });
+    },
+    
+    // Get username by user ID
+    getUsernameById(userId) {
+      const user = this.users.find(u => u.id === userId);
+      return user ? user.username : `User ${userId}`;
+    },
+    
+    // Remove a team member from the selection
+    removeTeamMember(memberId) {
+      this.editForm.teamMembers = this.editForm.teamMembers.filter(id => id !== memberId);
+    },
+    
+    // Get team member name by ID
+    getMemberName(memberId) {
+      // Find the user from loaded users
+      const user = this.users.find(u => u.id === memberId);
+      if (user) {
+        return `${user.username} (${user.jobTitle})`;
+      }
+      
+      // Return ID as fallback if user not loaded
+      return `User ID: ${memberId}`;
+    },
+    
     // Utility function to debounce frequent calls
     debounce(func, wait) {
       let timeout
@@ -426,19 +771,23 @@ export default {
       this.error = null
       
       try {
-        // VULNERABILITY: Not validating the projectId before sending to API
         const response = await projectsAPI.getProject(this.projectId)
         this.project = response.data
         console.log('Project loaded:', this.project)
         
+        // Always fetch users when loading a project for consistent data
+        await this.fetchUsers()
+        
         // Initialize edit form if in edit mode
         if (this.isEditMode) {
-          this.populateEditForm()
+          await this.populateEditForm()
         }
+        
+        // Update the document title with the project name for better UX
+        document.title = this.project.name ? `Project: ${this.project.name}` : 'Project Details'
       } catch (error) {
         console.error('Error fetching project:', error)
-        // VULNERABILITY: Displaying detailed error message to user
-        this.error = `Failed to load project: ${error.message}`
+        this.error = 'Failed to load project. Please try again or contact support.'
       } finally {
         this.loading = false
       }
@@ -594,8 +943,48 @@ export default {
     enterEditMode() {
       this.$router.push(`/projects/${this.projectId}/edit`)
     },
-    populateEditForm() {
-      // VULNERABILITY: Not validating data from server
+    async fetchUsers() {
+      // Don't fetch if we already have user data
+      if (this.users && this.users.length > 0) {
+        return;
+      }
+      
+      try {
+        this.usersLoading = true
+        const response = await usersAPI.getUsersForProjectAssignment()
+        // Handle both possible response formats
+        if (response.data && response.data.users) {
+          // Admin endpoint returns { users: [...] }
+          this.users = response.data.users;
+        } else {
+          // Direct endpoint might return the users array
+          this.users = response.data || [];
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error)
+      } finally {
+        this.usersLoading = false
+      }
+    },
+
+    async populateEditForm() {
+      // If we're in edit mode but haven't loaded users yet, load them
+      // Do this first so that we have the user data when populating the form
+      if (this.users.length === 0) {
+        await this.fetchUsers();
+      }
+      
+      // Ensure teamMembers is an array of integers
+      let teamMembers = [];
+      if (this.project.teamMembers) {
+        if (Array.isArray(this.project.teamMembers)) {
+          teamMembers = this.project.teamMembers.map(id => parseInt(id));
+        } else if (typeof this.project.teamMembers === 'string') {
+          // Handle case where teamMembers comes back as a comma-separated string
+          teamMembers = this.project.teamMembers.split(',').map(id => parseInt(id.trim()));
+        }
+      }
+      
       this.editForm = {
         name: this.project.name || '',
         description: this.project.description || '',
@@ -604,8 +993,18 @@ export default {
         status: this.project.status || 'Not Started',
         completionPercentage: this.project.completionPercentage || 0,
         budget: this.project.budget || 0,
+        ownerId: this.project.ownerId || null,
+        teamMembers: teamMembers,
         clientNotes: this.project.metadata?.clientNotes || '',
         internalNotes: this.project.metadata?.internalNotes || ''
+      }
+      
+      // Highlight owner in the UI if there is one
+      if (this.editForm.ownerId) {
+        const owner = this.users.find(u => u.id === this.editForm.ownerId);
+        if (owner) {
+          console.log(`Project owner loaded: ${owner.username} (${owner.role})`);
+        }
       }
     },
     cancelEdit() {
@@ -624,11 +1023,15 @@ export default {
           status: this.editForm.status,
           completionPercentage: parseInt(this.editForm.completionPercentage) || 0,
           budget: parseFloat(this.editForm.budget) || 0,
+          ownerId: this.editForm.ownerId || null,
+          teamMembers: this.editForm.teamMembers || [],
           metadata: {
             clientNotes: this.editForm.clientNotes,
             internalNotes: this.editForm.internalNotes
           }
         }
+        
+        // Note: Owner name will be updated by the backend response
         
         // VULNERABILITY: Making direct HTTP request with string concatenation
         const response = await projectsAPI.updateProject(this.projectId, projectData)
@@ -742,6 +1145,11 @@ export default {
     this.fetchProject()
     this.fetchTasks()
     
+    // If in edit mode, fetch users for team member selection
+    if (this.isEditMode) {
+      this.fetchUsers()
+    }
+    
     // Force update completion percentage when component is mounted
     this.$nextTick(() => {
       setTimeout(() => {
@@ -760,6 +1168,123 @@ export default {
 <style scoped>
 .project-detail-view {
   padding: 1rem;
+}
+
+/* Owner search styles */
+.owner-search {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.owner-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.owner-search-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f4f8;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.owner-search-item:last-child {
+  border-bottom: none;
+}
+
+.owner-search-item:hover {
+  background-color: #edf2f7;
+}
+
+.owner-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.owner-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-username {
+  color: #2d3748;
+  font-size: 0.95rem;
+}
+
+.owner-position {
+  color: #718096;
+  font-size: 0.8rem;
+}
+
+.selected-owner {
+  margin-top: 1rem;
+}
+
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+  color: #2b6cb0;
+}
+
+.owner-badge-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #63b3ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.owner-badge-info {
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.clear-owner {
+  background: none;
+  border: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #63b3ed;
+  color: white;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clear-owner:hover {
+  background-color: #2b6cb0;
 }
 
 .project-header {
@@ -976,10 +1501,228 @@ export default {
   color: #2d3748;
 }
 
-.budget-value {
+.budget-value, .owner-value {
   font-size: 1.25rem;
   font-weight: 600;
   color: #2d3748;
+}
+
+.owner-meta {
+  font-size: 0.9rem;
+  color: #718096;
+  margin-top: 0.5rem;
+}
+
+.owner-profile {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.owner-profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #4299e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.owner-profile-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-meta-details {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.owner-role {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.5rem;
+  background-color: #ebf8ff;
+  color: #2b6cb0;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.no-owner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a0aec0;
+  font-style: italic;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #e2e8f0;
+}
+
+.no-owner i {
+  font-size: 1.25rem;
+}
+
+/* Team Members Styles */
+.team-members-section {
+  margin-bottom: 1.5rem;
+}
+
+.team-members-search {
+  margin-bottom: 0.75rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.team-members-list, .search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.team-member-item, .search-result-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.team-member-item:last-child, .search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item {
+  background-color: #f8fafc;
+}
+
+.no-results {
+  padding: 0.75rem;
+  color: #a0aec0;
+  font-style: italic;
+  text-align: center;
+  background-color: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.selected-members {
+  margin-top: 0.75rem;
+}
+
+.selected-count {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-bottom: 0.5rem;
+}
+
+.selected-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.selected-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ebf8ff;
+  color: #3182ce;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 50px;
+  border: 1px solid #bee3f8;
+}
+
+.remove-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #63b3ed;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.remove-badge:hover {
+  background-color: #3182ce;
+}
+
+.team-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.team-member {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f8fafc;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  border: 1px solid #e2e8f0;
+}
+
+.team-member-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.team-member-name {
+  font-size: 0.9rem;
+  color: #4a5568;
+  font-weight: 500;
+  display: block;
+}
+
+.team-member-job {
+  font-size: 0.75rem;
+  color: #718096;
+  display: block;
+}
+
+.additional-members {
+  font-size: 0.8rem;
+  color: #718096;
+  font-style: italic;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8fafc;
+  border-radius: 50px;
+  display: inline-block;
+}
+
+.no-team {
+  color: #a0aec0;
+  font-style: italic;
 }
 
 /* Kanban Board Styles */

@@ -1,32 +1,90 @@
 const sqlite3 = require('sqlite3').verbose();
 
+// Import the seedUsers function
+const seedUsers = require('./seed-users');
+
 // Function to seed the database with example projects and tasks
 function seedDatabase() {
-  console.log('Checking if database needs seeding...');
+  console.log('Preparing database for seeding...');
+  
+  // First seed users if needed
+  seedUsers();
   
   const db = new sqlite3.Database('./vuln_app.sqlite');
   
-  // First check if we already have projects
-  db.get("SELECT COUNT(*) as count FROM project", (err, row) => {
+  // Clear existing data and seed fresh data
+  clearAndSeedData(db);
+}
+
+// Function to clear existing data and seed fresh data
+function clearAndSeedData(db) {
+  console.log('Checking if project and task tables exist...');
+  
+  // Check if project table exists
+  db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='project'", (err, projectRow) => {
     if (err) {
-      // If the table doesn't exist yet, TypeORM will create it on app start
-      // We'll exit and try again after app has initialized the database
-      console.log('Database not ready yet, will try again on next restart');
+      console.error('Error checking for project table:', err);
       db.close();
       return;
     }
     
-    // If we already have projects, don't seed
-    if (row && row.count > 0) {
-      console.log(`Database already has ${row.count} projects. No seeding needed.`);
-      db.close();
-      return;
-    }
-    
-    console.log('No projects found. Seeding database with example data...');
-    
-    // Otherwise, create some sample projects and tasks
-    createProjects(db);
+    // Check if task table exists
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='task'", (err, taskRow) => {
+      if (err) {
+        console.error('Error checking for task table:', err);
+        db.close();
+        return;
+      }
+      
+      let tasksCleared = false;
+      let projectsCleared = false;
+      
+      // Function to proceed when both tables are cleared
+      const proceedWithSampleData = () => {
+        if (tasksCleared && projectsCleared) {
+          console.log('All tables cleared. Creating fresh sample data...');
+          createProjects(db);
+        }
+      };
+      
+      // Clear task table if it exists
+      if (taskRow) {
+        console.log('Clearing existing task data...');
+        db.run('DELETE FROM task', (err) => {
+          if (err) {
+            console.error('Error clearing task table:', err);
+            db.close();
+            return;
+          }
+          console.log('Task table cleared successfully.');
+          tasksCleared = true;
+          proceedWithSampleData();
+        });
+      } else {
+        console.log('Task table not found. It will be created on app start.');
+        tasksCleared = true;
+        proceedWithSampleData();
+      }
+      
+      // Clear project table if it exists
+      if (projectRow) {
+        console.log('Clearing existing project data...');
+        db.run('DELETE FROM project', (err) => {
+          if (err) {
+            console.error('Error clearing project table:', err);
+            db.close();
+            return;
+          }
+          console.log('Project table cleared successfully.');
+          projectsCleared = true;
+          proceedWithSampleData();
+        });
+      } else {
+        console.log('Project table not found. It will be created on app start.');
+        projectsCleared = true;
+        proceedWithSampleData();
+      }
+    });
   });
 }
 
@@ -40,7 +98,9 @@ function createProjects(db) {
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'In Progress',
-      completionPercentage: 25
+      completionPercentage: 25,
+      ownerId: 3, // dev_lead
+      managerId: 2 // project_manager
     },
     {
       name: 'Database Upgrade to PostgreSQL 14',
@@ -48,7 +108,9 @@ function createProjects(db) {
       startDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       endDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'Not Started',
-      completionPercentage: 0
+      completionPercentage: 0,
+      ownerId: 1, // admin_user
+      managerId: 2 // project_manager
     },
     {
       name: 'Third-Party Payment Integration',
@@ -56,17 +118,19 @@ function createProjects(db) {
       startDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'In Progress',
-      completionPercentage: 40
+      completionPercentage: 40,
+      ownerId: 2, // project_manager
+      clientId: 5 // client_user
     }
   ];
   
+  // Start a transaction for all the project and task creation
+  db.run('BEGIN TRANSACTION');
+  
   db.serialize(() => {
-    // Use a transaction for all inserts
-    db.run('BEGIN TRANSACTION');
-    
     // Prepare the statement outside the loop
     const projectStmt = db.prepare(
-      'INSERT INTO project (name, description, startDate, endDate, status, completionPercentage) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO project (name, description, startDate, endDate, status, completionPercentage, ownerId, managerId, clientId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     
     try {
@@ -79,6 +143,9 @@ function createProjects(db) {
           project.endDate,
           project.status,
           project.completionPercentage,
+          project.ownerId || null,
+          project.managerId || null,
+          project.clientId || null,
           function(err) {
             if (err) {
               console.error(`Error creating project ${project.name}:`, err);
@@ -289,20 +356,29 @@ function createTasksForProject(db, projectId, projectName, isLast) {
             console.log(`Created task: ${task.title} for project ${projectId}`);
           }
           
-          // If this is the last task of the last project, commit and close
+          // If this is the last task of the last project, signal completion
           if (isLast && index === tasks.length - 1) {
+            console.log('Database seeding completed successfully!');
+            
+            // Commit the transaction and close the database
             db.run('COMMIT', (err) => {
               if (err) {
                 console.error('Error committing transaction:', err);
+                db.run('ROLLBACK', () => {
+                  console.log('Transaction rolled back due to error.');
+                  db.close();
+                });
               } else {
-                console.log('Database seeding completed successfully!');
+                console.log('Transaction committed successfully!');
+                db.close();
               }
-              db.close();
             });
           }
         }
       );
     });
+  } catch (err) {
+    console.error('Error creating tasks:', err);
   } finally {
     taskStmt.finalize();
   }

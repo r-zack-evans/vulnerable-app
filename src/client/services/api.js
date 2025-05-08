@@ -1,19 +1,30 @@
 import axios from 'axios';
 
-// VULNERABILITY: API base URL hardcoded & visible in client-side code
-const API_URL = '/api/vue';
+// API base URLs for different types of endpoints
+const VUE_API_URL = '/api/vue';
+const DIRECT_API_URL = '/api';
 
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_URL,
+// Create separate API clients for different types of endpoints
+const vueApiClient = axios.create({
+  baseURL: VUE_API_URL,
   headers: {
     'Content-Type': 'application/json',
-    // VULNERABILITY: Default Accept header that could leak framework version
     'Accept': 'application/json, text/plain, */*',
   },
-  // VULNERABILITY: Sending credentials by default for all requests
   withCredentials: true
 });
+
+const directApiClient = axios.create({
+  baseURL: DIRECT_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
+  },
+  withCredentials: true
+});
+
+// Create axios instance with default config - backward compatibility
+const apiClient = vueApiClient;
 
 // VULNERABILITY: No request/response interceptors for error handling
 // In a secure app, we would validate responses and handle errors consistently
@@ -58,8 +69,26 @@ export const usersAPI = {
   // VULNERABILITY: No validation before sending to API
   updateProfile: (userData) => apiClient.put('/users/profile', userData),
   
-  // Admin endpoints - VULNERABILITY: No role checking on client side
-  getAllUsers: () => apiClient.get('/admin/users'),
+  // Get user by ID - used for looking up project owners and team members
+  getUserById: (userId) => {
+    // The API returns a different format than what our component expects
+    // This adapter ensures we get the right format
+    return directApiClient.get(`/users/${userId}`).then(response => {
+      if (response.data && !response.data.profile) {
+        // Convert direct user object to expected format with 'profile' key
+        return { data: { profile: response.data } };
+      }
+      return response;
+    });
+  },
+  
+  // Get all users using the non-admin endpoint that doesn't require special permissions
+  getAllUsers: () => directApiClient.get('/users'),
+  
+  // Get users for project assignment - explicitly use the public endpoint
+  getUsersForProjectAssignment: () => directApiClient.get('/users'),
+  
+  // Admin endpoints - VULNERABILITY: No role checking on client side  
   deleteUser: (userId) => apiClient.delete(`/admin/users/${userId}`)
 };
 
