@@ -1,0 +1,165 @@
+import express from 'express';
+import { getRepository } from 'typeorm';
+import { User } from '../entity/User';
+import multer from 'multer';
+import path from 'path';
+import { checkAuth } from '../middleware/auth';
+
+const router = express.Router();
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../public/uploads/profiles'));
+  },
+  filename: (req, file, cb) => {
+    // VULNERABILITY: Original filename used without sanitization
+    cb(null, file.originalname);
+  }
+});
+
+const upload = multer({ storage });
+
+// Display user profile
+router.get('/profile', checkAuth, async (req, res) => {
+  try {
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.session.user.id } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    res.json('profile', { user });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Update user profile
+router.post('/profile', checkAuth, upload.single('profilePicture'), async (req, res) => {
+  try {
+    const { username, email, theme, notifications } = req.body;
+    const userRepository = getRepository(User);
+    
+    const user = await userRepository.findOne({ where: { id: req.session.user.id } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    // VULNERABILITY: No validation on inputs
+    user.username = username;
+    user.email = email;
+    
+    // Update preferences
+    user.preferences = { 
+      theme: theme || 'light', 
+      notifications: notifications === 'on' 
+    };
+    
+    // Update profile picture if uploaded
+    if (req.file) {
+      // VULNERABILITY: No file type validation
+      user.profilePicture = `/uploads/profiles/${req.file.filename}`;
+    }
+    
+    await userRepository.save(user);
+    
+    // Update session data
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      role: user.role
+    };
+    
+    res.redirect('/users/profile');
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Display user settings
+router.get('/settings', checkAuth, (req, res) => {
+  res.json('settings', { user: req.session.user });
+});
+
+// Update user settings
+router.post('/settings', checkAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, creditCardNumber } = req.body;
+    const userRepository = getRepository(User);
+    
+    const user = await userRepository.findOne({ where: { id: req.session.user.id } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    // VULNERABILITY: Weak password requirements - no length or complexity check
+    
+    // VULNERABILITY: Credit card stored in plaintext
+    if (creditCardNumber) {
+      user.creditCardNumber = creditCardNumber;
+    }
+    
+    if (currentPassword && newPassword) {
+      // Check current password
+      let passwordValid = false;
+      
+      if (user.passwordHash) {
+        // Using hashed password
+        const bcrypt = require('bcrypt');
+        passwordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      } else {
+        // Using plaintext password
+        passwordValid = (currentPassword === user.password);
+      }
+      
+      if (!passwordValid) {
+        return res.json('settings', { 
+          user: req.session.user, 
+          error: 'Current password is incorrect' 
+        });
+      }
+      
+      // Update to new password
+      const bcrypt = require('bcrypt');
+      const salt = await bcrypt.genSalt(10);
+      user.passwordHash = await bcrypt.hash(newPassword, salt);
+      user.password = '[HASHED]'; // Placeholder for the hashed version
+    }
+    
+    await userRepository.save(user);
+    
+    res.json('settings', { 
+      user: req.session.user, 
+      message: 'Settings updated successfully' 
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// View other user profiles (IDOR vulnerability)
+router.get('/view/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // VULNERABILITY: IDOR (Insecure Direct Object Reference)
+    // No proper authorization, any user can view any other user's profile
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOne({ where: { id: parseInt(id) } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    // VULNERABILITY: Exposing sensitive information
+    res.json('user-view', { profile: user, currentUser: req.session.user });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+export default router;

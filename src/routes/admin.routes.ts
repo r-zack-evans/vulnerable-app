@@ -1,0 +1,227 @@
+import express from 'express';
+import { getRepository } from 'typeorm';
+import { User } from '../entity/User';
+import { Product } from '../entity/Product';
+import { checkAdmin } from '../middleware/auth';
+import fs from 'fs';
+import path from 'path';
+
+const router = express.Router();
+
+// Admin dashboard
+router.get('/dashboard', checkAdmin, async (req, res) => {
+  try {
+    const userRepository = getRepository(User);
+    const productRepository = getRepository(Product);
+    
+    const users = await userRepository.find();
+    const products = await productRepository.find();
+    
+    res.json('admin/dashboard', { 
+      user: req.session.user,
+      users,
+      products,
+      totalUsers: users.length,
+      totalProducts: products.length
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Manage users
+router.get('/users', checkAdmin, async (req, res) => {
+  try {
+    const userRepository = getRepository(User);
+    const users = await userRepository.find();
+    
+    res.json('admin/users', { 
+      user: req.session.user,
+      users
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Edit user form
+router.get('/users/:id/edit', checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOne({ where: { id: parseInt(id) } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    res.json('admin/edit-user', { 
+      user: req.session.user,
+      editUser: user
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Update user
+router.post('/users/:id', checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, role } = req.body;
+    
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOne({ where: { id: parseInt(id) } });
+    
+    if (!user) {
+      return res.status(404).render('error', { message: 'User not found' });
+    }
+    
+    // VULNERABILITY: No input validation
+    user.username = username;
+    user.email = email;
+    user.role = role;
+    
+    await userRepository.save(user);
+    
+    res.redirect('/admin/users');
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Delete user
+router.post('/users/:id/delete', checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const userRepository = getRepository(User);
+    await userRepository.delete(id);
+    
+    res.redirect('/admin/users');
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// File browser - dangerous functionality
+router.get('/files', checkAdmin, (req, res) => {
+  try {
+    const dirPath = req.query.path ? String(req.query.path) : '/';
+    
+    // VULNERABILITY: Directory traversal
+    // This allows browsing any directory on the server
+    const actualPath = path.resolve(dirPath);
+    
+    const files = fs.readdirSync(actualPath).map(file => {
+      const filePath = path.join(actualPath, file);
+      const stats = fs.statSync(filePath);
+      return {
+        name: file,
+        path: filePath,
+        isDirectory: stats.isDirectory(),
+        size: stats.size,
+        modified: stats.mtime
+      };
+    });
+    
+    res.json('admin/files', {
+      user: req.session.user,
+      files,
+      currentPath: actualPath
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Execute system commands - dangerous
+router.post('/execute', checkAdmin, (req, res) => {
+  try {
+    const { command } = req.body;
+    
+    // VULNERABILITY: Command injection
+    // This executes arbitrary system commands
+    const { execSync } = require('child_process');
+    const output = execSync(command).toString();
+    
+    res.json('admin/execute', {
+      user: req.session.user,
+      command,
+      output
+    });
+  } catch (err) {
+    res.json('admin/execute', {
+      user: req.session.user,
+      command: req.body.command,
+      error: err.message
+    });
+  }
+});
+
+// View system info - dangerous
+router.get('/execute', checkAdmin, (req, res) => {
+  res.json('admin/execute', { user: req.session.user });
+});
+
+// Config editor - dangerous
+router.get('/config', checkAdmin, (req, res) => {
+  try {
+    // VULNERABILITY: Hardcoded path to a sensitive file
+    const configPath = path.join(__dirname, '../../config.json');
+    
+    // Create config file if it doesn't exist
+    if (!fs.existsSync(configPath)) {
+      const defaultConfig = {
+        app: {
+          name: 'Vulnerable Demo App',
+          debug: true
+        },
+        database: {
+          host: 'localhost',
+          username: 'admin',
+          password: 'password123' // VULNERABILITY: Hardcoded credentials
+        },
+        smtp: {
+          host: 'smtp.example.com',
+          port: 587,
+          username: 'user@example.com',
+          password: 'emailpassword' // VULNERABILITY: Hardcoded credentials
+        }
+      };
+      
+      fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+    }
+    
+    const configContent = fs.readFileSync(configPath, 'utf8');
+    
+    res.json('admin/config', {
+      user: req.session.user,
+      config: configContent
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+// Save config
+router.post('/config', checkAdmin, (req, res) => {
+  try {
+    const { config } = req.body;
+    
+    // VULNERABILITY: No validation of config JSON
+    // VULNERABILITY: Writing user input directly to a file
+    const configPath = path.join(__dirname, '../../config.json');
+    fs.writeFileSync(configPath, config);
+    
+    res.json('admin/config', {
+      user: req.session.user,
+      config,
+      message: 'Configuration saved successfully'
+    });
+  } catch (err) {
+    res.status(500).render('error', { message: err.message });
+  }
+});
+
+export default router;

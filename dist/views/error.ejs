@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - Vulnerable Demo App</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  
+  <main class="container">
+    <section class="error-page">
+      <h1>Error</h1>
+      
+      <div class="alert alert-danger">
+        <!-- VULNERABILITY: Potential XSS if message contains script tags -->
+        <p><%- message %></p>
+      </div>
+      
+      <% if (typeof error !== 'undefined' && error) { %>
+        <!-- VULNERABILITY: Information disclosure - exposing detailed error information -->
+        <div class="error-details">
+          <h3>Error Details</h3>
+          <pre><%= error.stack %></pre>
+        </div>
+      <% } %>
+      
+      <div class="actions">
+        <a href="/" class="btn">Back to Home</a>
+      </div>
+    </section>
+  </main>
+  
+  <%- include('partials/footer') %>
+</body>
+</html>
