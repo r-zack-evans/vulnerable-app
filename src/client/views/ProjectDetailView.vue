@@ -135,8 +135,26 @@
           </div>
 
           <!-- VULNERABILITY: Showing internal metadata without proper controls -->
-          <div class="card-section metadata-section">
+          <div class="card-section metadata-section tasks-section">
             <h3>Tasks</h3>
+            <div class="section-header tasks-management-header">
+              <!-- VULNERABILITY: No CSRF protection when creating a new task -->
+              <Button @click="openNewTaskModal()" variant="primary" text="Add Task" />
+            </div>
+            
+            <div v-if="tasksLoading" class="loading">Loading tasks...</div>
+            <div v-else-if="tasksError" class="error">{{ tasksError }}</div>
+            <div v-else-if="tasks.length === 0" class="no-tasks">
+              <p>No tasks assigned to this project yet. Click "Add Task" to create a new task.</p>
+            </div>
+            <div v-else class="tasks-actions">
+              <p class="tasks-help">Drag tasks between columns to update their status. Tasks can be edited or deleted from the modal.</p>
+              <div class="task-actions-row">
+                <Button @click="openNewTaskModal()" variant="secondary" text="Create Task" size="small" />
+                <Button @click="fetchTasks()" variant="outline" text="Refresh Tasks" size="small" />
+              </div>
+            </div>
+            
             <div class="kanban-board">
               <div class="kanban-column">
                 <div class="column-header not-started-header">Not Started</div>
@@ -225,26 +243,7 @@
           </div>
         </div>
         
-        <div class="project-tasks-section">
-          <div class="section-header">
-            <h2>Manage Tasks</h2>
-            <!-- VULNERABILITY: No CSRF protection when creating a new task -->
-            <Button @click="openNewTaskModal()" variant="primary" text="Add Task" />
-          </div>
-          
-          <div v-if="tasksLoading" class="loading">Loading tasks...</div>
-          <div v-else-if="tasksError" class="error">{{ tasksError }}</div>
-          <div v-else-if="tasks.length === 0" class="no-tasks">
-            <p>No tasks assigned to this project yet. Click "Add Task" to create a new task.</p>
-          </div>
-          <div v-else class="tasks-actions">
-            <p class="tasks-help">Drag tasks between columns to update their status. Tasks can be edited or deleted from the modal.</p>
-            <div class="task-actions-row">
-              <Button @click="openNewTaskModal()" variant="secondary" text="Create Task" size="small" />
-              <Button @click="fetchTasks()" variant="outline" text="Refresh Tasks" size="small" />
-            </div>
-          </div>
-        </div>
+        <!-- Manage Tasks section moved to above the Kanban board -->
       </div>
       
       <!-- Delete Confirmation Modal -->
@@ -798,7 +797,9 @@ export default {
 
 @media (min-width: 1024px) {
   .project-content {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
   }
 }
 
@@ -983,17 +984,43 @@ export default {
 
 /* Kanban Board Styles */
 .kanban-board {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 1rem;
+  width: 100%;
+  height: calc(100vh - 240px); /* Take up entire content pane with some room for headers */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .kanban-board {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.5rem;
+  }
+  
+  .kanban-column {
+    scroll-snap-align: start;
+    min-width: 85%;
+    max-width: 85%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .kanban-column {
+    min-width: 220px;
+  }
 }
 
 .kanban-column {
   display: flex;
   flex-direction: column;
-  min-width: 250px;
+  flex: 1 1 0;
+  min-width: 200px;
+  max-width: 100%;
   background-color: #f7fafc;
   border-radius: 8px;
   overflow: hidden;
@@ -1008,18 +1035,22 @@ export default {
 
 .not-started-header {
   background-color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .in-progress-header {
   background-color: #3182ce;
+  border-bottom: 2px solid #bee3f8;
 }
 
 .on-hold-header {
   background-color: #e53e3e;
+  border-bottom: 2px solid #fed7d7;
 }
 
 .complete-header {
   background-color: #38a169;
+  border-bottom: 2px solid #c6f6d5;
 }
 
 .column-tasks {
@@ -1029,8 +1060,9 @@ export default {
   flex-direction: column;
   gap: 0.75rem;
   min-height: 100px;
-  max-height: 60vh;
+  max-height: calc(100vh - 300px); /* Adjusted to fill the container */
   overflow-y: auto;
+  width: 100%;
 }
 
 .kanban-task {
@@ -1041,6 +1073,8 @@ export default {
   cursor: grab;
   user-select: none;
   transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  word-break: break-word;
 }
 
 .kanban-task:hover {
@@ -1112,6 +1146,19 @@ export default {
   margin-bottom: 1.5rem;
 }
 
+.tasks-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tasks-management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .project-tasks-section {
   display: flex;
   flex-direction: column;
@@ -1132,6 +1179,10 @@ export default {
   color: #4a5568;
   font-size: 0.95rem;
   margin: 0;
+}
+
+.tasks-actions {
+  margin-bottom: 1rem;
 }
 
 .task-actions-row {
