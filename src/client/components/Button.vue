@@ -48,19 +48,19 @@ export default {
 <style scoped>
 .btn {
   display: inline-block;
-  font-weight: 400;
-  color: #212529;
+  font-weight: 500;
   text-align: center;
   vertical-align: middle;
   user-select: none;
   background-color: transparent;
   border: 1px solid transparent;
-  padding: 0.375rem 0.75rem;
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
   line-height: 1.5;
-  border-radius: 0.25rem;
-  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  border-radius: 2rem;
+  transition: all 0.3s ease;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .btn:disabled {
@@ -70,34 +70,63 @@ export default {
 
 .btn-primary {
   color: #fff;
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: #5c6bc0; /* Pastel indigo */
+  border-color: #5c6bc0;
+}
+
+.btn-primary:hover {
+  background-color: #4d5cb3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(92, 107, 192, 0.2);
 }
 
 .btn-secondary {
-  color: #fff;
-  background-color: #6c757d;
-  border-color: #6c757d;
+  color: #5c6bc0;
+  background-color: #e8eaf6; /* Very light indigo */
+  border-color: #e8eaf6;
+}
+
+.btn-secondary:hover {
+  background-color: #d1d6f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(92, 107, 192, 0.1);
 }
 
 .btn-danger {
   color: #fff;
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background-color: #ef9a9a; /* Pastel red */
+  border-color: #ef9a9a;
+}
+
+.btn-danger:hover {
+  background-color: #e57373;
+  transform: translateY(-2px);
 }
 
 .btn-outline {
-  color: #007bff;
-  border-color: #007bff;
+  color: #5c6bc0;
+  border-color: #5c6bc0;
   background-color: transparent;
 }
 
+.btn-outline:hover {
+  background-color: rgba(92, 107, 192, 0.05);
+  transform: translateY(-2px);
+}
+
 .btn-link {
-  font-weight: 400;
-  color: #007bff;
+  font-weight: 500;
+  color: #5c6bc0;
   text-decoration: none;
   background-color: transparent;
   border: none;
+  box-shadow: none;
+  padding: 0.5rem 0.75rem;
+}
+
+.btn-link:hover {
+  color: #3949ab;
+  text-decoration: underline;
 }
 
 .spinner {

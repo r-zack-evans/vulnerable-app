@@ -1,9 +1,11 @@
 <template>
   <footer class="app-footer">
     <div class="container">
-      <p>&copy; {{ currentYear }} ProjectTrack Enterprise - For Demonstration Purposes Only</p>
-      <p>Enterprise project management solution for teams of all sizes.</p>
-      <p>This is a demo application and should not be used in production environments.</p>
+      <div class="footer-content">
+        <div class="copyright">
+          &copy; {{ currentYear }} ProjectTrack
+        </div>
+      </div>
     </div>
   </footer>
 </template>
@@ -21,16 +23,26 @@ export default {
 
 <style scoped>
 .app-footer {
-  background-color: #333;
-  color: white;
+  background-color: white;
+  color: #333;
   padding: 1rem 0;
   margin-top: 2rem;
-  text-align: center;
+  border-top: 1px solid #eaeaea;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 15px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.copyright {
+  color: #666;
 }
 </style>

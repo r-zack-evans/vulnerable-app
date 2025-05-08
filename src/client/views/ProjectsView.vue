@@ -70,7 +70,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="project in filteredProjects" :key="project.id" class="project-row">
+            <tr v-for="project in filteredProjects" :key="project.id" class="project-row" @click="viewProject(project.id)">
               <td class="project-name-cell">
                 <h3 class="project-name" @click="viewProject(project.id)">{{ project.name }}</h3>
                 <p class="description">{{ project.description }}</p>
@@ -97,13 +97,10 @@
                 </div>
               </td>
               <td class="actions-cell">
-                <span class="action-icon view-icon" @click="viewProject(project.id)" title="View Details">
-                  <i class="fas fa-eye"></i>
-                </span>
-                <span class="action-icon edit-icon" @click="openEditModal(project)" title="Edit Project">
+                <span class="action-icon edit-icon" @click.stop="openEditModal(project)" title="Edit Project">
                   <i class="fas fa-pen"></i>
                 </span>
-                <span class="action-icon delete-icon" @click="confirmDeleteProject(project)" title="Delete Project">
+                <span class="action-icon delete-icon" @click.stop="confirmDeleteProject(project)" title="Delete Project">
                   <i class="fas fa-trash-alt"></i>
                 </span>
               </td>
@@ -400,18 +397,33 @@ export default {
   padding: 1rem;
   font-weight: 600;
   color: #4a5568;
-  border-bottom: 1px solid #f0f4f8;
+  border-bottom: 2px solid #e2e8f0;
   background-color: #f8fafc;
 }
 
 .projects-table td {
   padding: 1rem;
   vertical-align: top;
+  border-bottom: none;
+}
+
+.project-row {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  cursor: pointer;
+  background-color: #ffffff;
   border-bottom: 1px solid #f0f4f8;
 }
 
+.project-row td {
+  border-bottom: none;
+}
+
 .project-row:hover {
-  background-color: #f8fafd;
+  background-color: #f0f7ff; /* Light pastel blue */
+  transform: translateY(-3px);
+  box-shadow: 0 3px 15px rgba(92, 107, 192, 0.1);
+  z-index: 1;
 }
 
 .project-name-cell {
@@ -449,27 +461,27 @@ export default {
 }
 
 .status-not-started {
-  background-color: #f5f7fa;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: #e8eaf6;
+  color: #5c6bc0;
+  border: 1px solid #d1d6f0;
 }
 
 .status-in-progress {
-  background-color: #e6f6ff;
-  color: #3182ce;
-  border: 1px solid #bee3f8;
+  background-color: #e1f5fe;
+  color: #039be5;
+  border: 1px solid #b3e5fc;
 }
 
 .status-on-hold {
-  background-color: #fff5f5;
-  color: #e53e3e;
-  border: 1px solid #fed7d7;
+  background-color: #ffecb3;
+  color: #ff8f00;
+  border: 1px solid #ffe082;
 }
 
 .status-complete {
-  background-color: #f0fff4;
-  color: #38a169;
-  border: 1px solid #c6f6d5;
+  background-color: #e0f2f1;
+  color: #00897b;
+  border: 1px solid #b2dfdb;
 }
 
 .description {
@@ -516,7 +528,8 @@ export default {
 
 .progress {
   height: 100%;
-  background-color: #63b3ed;
+  background-color: #5c6bc0; /* Match our primary color */
+  background-image: linear-gradient(to right, #5c6bc0, #7986cb);
 }
 
 .actions-cell {
@@ -527,13 +540,14 @@ export default {
 .action-icon {
   display: inline-block;
   margin: 0 0.5rem;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
   text-align: center;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .action-icon i {
@@ -546,18 +560,24 @@ export default {
 }
 
 .edit-icon {
-  background-color: #fff4e2; /* Pastel yellow/orange */
-  color: #ffa41b;
+  background-color: #fff8e1; /* Light amber/yellow */
+  color: #ffab00;
 }
 
 .delete-icon {
-  background-color: #ffe2e2; /* Pastel red */
-  color: #ff5252;
+  background-color: #fce4ec; /* Pastel pink */
+  color: #ec407a;
 }
 
 .action-icon:hover {
   transform: scale(1.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Action icon styling */
+.action-icon {
+  position: relative;
+  z-index: 5;
 }
 
 .modal {

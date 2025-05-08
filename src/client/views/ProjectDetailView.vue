@@ -102,13 +102,13 @@
           <div class="card-section status-section">
             <h3>Status</h3>
             <div class="status-info">
-              <span :class="['status-badge', 'status-' + project.status.toLowerCase().replace(' ', '-')]">{{ project.status }}</span>
-              <div class="completion-info">
-                <div class="progress-bar">
-                  <div class="progress" :style="{ width: project.completionPercentage + '%' }"></div>
-                </div>
-                <span>{{ project.completionPercentage }}% Complete</span>
-              </div>
+            <span :class="['status-badge', 'status-' + project.status.toLowerCase().replace(' ', '-')]">{{ project.status }}</span>
+            <div class="completion-info">
+            <div class="progress-bar">
+            <div class="progress" :style="{ width: project.completionPercentage + '%' }"></div>
+            </div>
+            <span>{{ project.completionPercentage }}% Complete ({{ tasks.filter(t => t.status === 'Complete').length }}/{{ tasks.length }} tasks)</span>
+            </div>
             </div>
           </div>
           
@@ -135,18 +135,91 @@
           </div>
 
           <!-- VULNERABILITY: Showing internal metadata without proper controls -->
-          <div class="card-section metadata-section" v-if="project.metadata">
-            <h3>Notes</h3>
-            <div class="metadata-info">
-              <div class="metadata-item" v-if="project.metadata.clientNotes">
-                <h4>Client Notes</h4>
-                <!-- VULNERABILITY: Rendering potentially unsafe content -->
-                <div v-html="project.metadata.clientNotes"></div>
+          <div class="card-section metadata-section">
+            <h3>Tasks</h3>
+            <div class="kanban-board">
+              <div class="kanban-column">
+                <div class="column-header not-started-header">Not Started</div>
+                <div class="column-tasks" @dragover.prevent @drop="dropTask($event, 'Not Started')">
+                  <div v-for="task in tasksByStatus['Not Started']" :key="task.id" class="kanban-task" draggable="true" @dragstart="dragStart($event, task)" @dragend="dragEnd">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-meta">
+                      <span v-if="task.dueDate">Due: {{ formatDate(task.dueDate) }}</span>
+                      <span v-if="task.assignedTo">{{ task.assignedTo }}</span>
+                    </div>
+                    <div class="kanban-task-actions">
+                      <button class="icon-btn" @click.stop="editTask(task)" title="Edit Task">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="deleteTask(task.id)" title="Delete Task">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="metadata-item" v-if="project.metadata.internalNotes">
-                <h4>Internal Notes</h4>
-                <!-- VULNERABILITY: Rendering potentially unsafe content -->
-                <div v-html="project.metadata.internalNotes"></div>
+              
+              <div class="kanban-column">
+                <div class="column-header in-progress-header">In Progress</div>
+                <div class="column-tasks" @dragover.prevent @drop="dropTask($event, 'In Progress')">
+                  <div v-for="task in tasksByStatus['In Progress']" :key="task.id" class="kanban-task" draggable="true" @dragstart="dragStart($event, task)" @dragend="dragEnd">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-meta">
+                      <span v-if="task.dueDate">Due: {{ formatDate(task.dueDate) }}</span>
+                      <span v-if="task.assignedTo">{{ task.assignedTo }}</span>
+                    </div>
+                    <div class="kanban-task-actions">
+                      <button class="icon-btn" @click.stop="editTask(task)" title="Edit Task">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="deleteTask(task.id)" title="Delete Task">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="kanban-column">
+                <div class="column-header on-hold-header">On Hold</div>
+                <div class="column-tasks" @dragover.prevent @drop="dropTask($event, 'On Hold')">
+                  <div v-for="task in tasksByStatus['On Hold']" :key="task.id" class="kanban-task" draggable="true" @dragstart="dragStart($event, task)" @dragend="dragEnd">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-meta">
+                      <span v-if="task.dueDate">Due: {{ formatDate(task.dueDate) }}</span>
+                      <span v-if="task.assignedTo">{{ task.assignedTo }}</span>
+                    </div>
+                    <div class="kanban-task-actions">
+                      <button class="icon-btn" @click.stop="editTask(task)" title="Edit Task">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="deleteTask(task.id)" title="Delete Task">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="kanban-column">
+                <div class="column-header complete-header">Complete</div>
+                <div class="column-tasks" @dragover.prevent @drop="dropTask($event, 'Complete')">
+                  <div v-for="task in tasksByStatus['Complete']" :key="task.id" class="kanban-task" draggable="true" @dragstart="dragStart($event, task)" @dragend="dragEnd">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-meta">
+                      <span v-if="task.dueDate">Due: {{ formatDate(task.dueDate) }}</span>
+                      <span v-if="task.assignedTo">{{ task.assignedTo }}</span>
+                    </div>
+                    <div class="kanban-task-actions">
+                      <button class="icon-btn" @click.stop="editTask(task)" title="Edit Task">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="deleteTask(task.id)" title="Delete Task">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -154,7 +227,7 @@
         
         <div class="project-tasks-section">
           <div class="section-header">
-            <h2>Tasks</h2>
+            <h2>Manage Tasks</h2>
             <!-- VULNERABILITY: No CSRF protection when creating a new task -->
             <Button @click="openNewTaskModal()" variant="primary" text="Add Task" />
           </div>
@@ -162,24 +235,13 @@
           <div v-if="tasksLoading" class="loading">Loading tasks...</div>
           <div v-else-if="tasksError" class="error">{{ tasksError }}</div>
           <div v-else-if="tasks.length === 0" class="no-tasks">
-            <p>No tasks assigned to this project yet.</p>
+            <p>No tasks assigned to this project yet. Click "Add Task" to create a new task.</p>
           </div>
-          <div v-else class="tasks-list">
-            <div v-for="task in tasks" :key="task.id" class="task-card">
-              <div class="task-header">
-                <h3>{{ task.title }}</h3>
-                <span :class="['task-status', 'status-' + task.status.toLowerCase().replace(' ', '-')]">{{ task.status }}</span>
-              </div>
-              <!-- VULNERABILITY: XSS vulnerability by rendering HTML from database -->
-              <div class="task-description" v-html="task.description"></div>
-              <div class="task-meta">
-                <span>Due: {{ formatDate(task.dueDate) }}</span>
-                <span v-if="task.assignedTo">Assigned to: {{ task.assignedTo }}</span>
-              </div>
-              <div class="task-actions">
-                <Button @click="editTask(task)" variant="secondary" text="Edit" size="small" />
-                <Button @click="deleteTask(task.id)" variant="danger" text="Delete" size="small" />
-              </div>
+          <div v-else class="tasks-actions">
+            <p class="tasks-help">Drag tasks between columns to update their status. Tasks can be edited or deleted from the modal.</p>
+            <div class="task-actions-row">
+              <Button @click="openNewTaskModal()" variant="secondary" text="Create Task" size="small" />
+              <Button @click="fetchTasks()" variant="outline" text="Refresh Tasks" size="small" />
             </div>
           </div>
         </div>
@@ -294,6 +356,33 @@ export default {
     projectId() {
       // VULNERABILITY: No validation of the ID parameter
       return this.$route.params.id
+    },
+    tasksByStatus() {
+      const result = {
+        'Not Started': [],
+        'In Progress': [],
+        'On Hold': [],
+        'Complete': []
+      }
+      
+      if (this.tasks && this.tasks.length) {
+        this.tasks.forEach(task => {
+          if (result[task.status]) {
+            result[task.status].push(task)
+          } else {
+            // Default fallback if status is unexpected
+            result['Not Started'].push(task)
+          }
+        })
+      }
+      
+      return result
+    },
+    completionPercentage() {
+      if (!this.tasks || this.tasks.length === 0) return 0
+      
+      const completedTasks = this.tasks.filter(task => task.status === 'Complete').length
+      return Math.round((completedTasks / this.tasks.length) * 100)
     }
   },
   watch: {
@@ -310,9 +399,26 @@ export default {
       if (this.isEditMode && this.project.id) {
         this.populateEditForm()
       }
+    },
+    'tasks': {
+      deep: true,
+      handler() {
+        // Update project completion whenever tasks change
+        this.updateProjectCompletion()
+      }
     }
   },
   methods: {
+    // Utility function to debounce frequent calls
+    debounce(func, wait) {
+      let timeout
+      return function() {
+        const context = this
+        const args = arguments
+        clearTimeout(timeout)
+        timeout = setTimeout(() => func.apply(context, args), wait)
+      }
+    },
     goBack() {
       this.$router.push('/projects')
     },
@@ -347,11 +453,105 @@ export default {
         const response = await projectsAPI.getProjectTasks(this.projectId)
         this.tasks = response.data
         console.log(`Loaded ${this.tasks.length} tasks`)
+        
+        // Update project completion percentage based on tasks
+        this.updateProjectCompletion()
       } catch (error) {
         console.error('Error fetching tasks:', error)
         this.tasksError = 'Failed to load tasks. Please try again.'
       } finally {
         this.tasksLoading = false
+      }
+    },
+    
+    updateProjectCompletion() {
+      // Skip if there are no tasks
+      if (!this.tasks) return
+      
+      // Always calculate the current completion percentage based on tasks
+      const completedTasks = this.tasks.filter(task => task.status === 'Complete').length
+      const currentPercentage = this.tasks.length > 0 ? 
+        Math.round((completedTasks / this.tasks.length) * 100) : 0
+      
+      // Check if the completion percentage is different from the current one
+      if (this.project.completionPercentage !== currentPercentage) {
+        // Update local project data first
+        this.project.completionPercentage = currentPercentage
+        
+        // Send update to the server
+        this.updateProjectCompletion_debounced()
+      }
+    },
+    
+    async updateProjectCompletionOnServer() {
+      try {
+        // Get current completion percentage from the project object
+        // which was updated in updateProjectCompletion
+        const currentPercentage = this.project.completionPercentage
+        
+        // Update only the completion percentage
+        const projectData = {
+          ...this.project,
+          completionPercentage: currentPercentage
+        }
+        
+        const response = await projectsAPI.updateProject(this.projectId, projectData)
+        console.log('Updated project completion percentage:', currentPercentage)
+      } catch (error) {
+        console.error('Error updating project completion:', error)
+      }
+    },
+    
+    dragStart(event, task) {
+      // Set data transfer
+      event.dataTransfer.setData('taskId', task.id)
+      event.dataTransfer.effectAllowed = 'move'
+      
+      // Add class for styling
+      event.target.classList.add('dragging')
+    },
+    
+    dragEnd(event) {
+      // Remove dragging class
+      event.target.classList.remove('dragging')
+    },
+    
+    async dropTask(event, newStatus) {
+      event.preventDefault()
+      
+      // Get the task ID from data transfer
+      const taskId = event.dataTransfer.getData('taskId')
+      if (!taskId) return
+      
+      // Find the task in our list
+      const task = this.tasks.find(t => t.id === parseInt(taskId))
+      if (!task) return
+      
+      // Skip if status hasn't changed
+      if (task.status === newStatus) return
+      
+      // Update task status locally first
+      const oldStatus = task.status
+      task.status = newStatus
+      
+      try {
+        // Send the update to the server
+        const taskData = {
+          ...task,
+          status: newStatus
+        }
+        
+        await axios.put(`/tasks/${taskId}`, taskData)
+        console.log(`Task ${taskId} status changed from ${oldStatus} to ${newStatus}`)
+        
+        // Update project completion percentage
+        this.updateProjectCompletion()
+      } catch (error) {
+        console.error('Error updating task status:', error)
+        
+        // Revert back if failed
+        task.status = oldStatus
+        this.tasksError = 'Failed to update task status. Please try again.'
       }
     },
     confirmDeleteProject() {
@@ -494,7 +694,8 @@ export default {
           // Update the task in the local list
           const index = this.tasks.findIndex(t => t.id === this.editingTask)
           if (index !== -1) {
-            this.tasks.splice(index, 1, response.data)
+            // Use Vue.set to ensure reactivity when updating array element
+            this.$set(this.tasks, index, response.data)
           }
         } else {
           // Create new task
@@ -506,6 +707,9 @@ export default {
         }
         
         this.closeTaskModal()
+        
+        // Update the project completion percentage
+        this.updateProjectCompletion()
       } catch (error) {
         console.error('Error saving task:', error)
         this.tasksError = `Failed to save task: ${error.message}`
@@ -520,6 +724,9 @@ export default {
         
         // Remove the task from the local list
         this.tasks = this.tasks.filter(t => t.id !== taskId)
+        
+        // Update the project completion percentage
+        this.updateProjectCompletion()
       } catch (error) {
         console.error('Error deleting task:', error)
         this.tasksError = 'Failed to delete task. Please try again.'
@@ -530,8 +737,20 @@ export default {
     // Check if we're in edit mode based on the route
     this.isEditMode = this.$route.path.includes('/edit')
     
+    // Create a debounced version of the update function to avoid too many server requests
+    this.updateProjectCompletion_debounced = this.debounce(this.updateProjectCompletionOnServer, 1000)
+    
     this.fetchProject()
     this.fetchTasks()
+    
+    // Force update completion percentage when component is mounted
+    this.$nextTick(() => {
+      setTimeout(() => {
+        if (this.tasks.length > 0) {
+          this.updateProjectCompletion()
+        }
+      }, 1000)
+    })
     
     // VULNERABILITY: Logging sensitive data to console
     console.log('Route params:', this.$route.params)
@@ -762,23 +981,163 @@ export default {
   color: #2d3748;
 }
 
-.metadata-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+/* Kanban Board Styles */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
 }
 
-.metadata-item h4 {
-  font-size: 0.95rem;
-  margin-top: 0;
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 250px;
+  background-color: #f7fafc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.column-header {
+  padding: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+}
+
+.not-started-header {
+  background-color: #64748b;
+}
+
+.in-progress-header {
+  background-color: #3182ce;
+}
+
+.on-hold-header {
+  background-color: #e53e3e;
+}
+
+.complete-header {
+  background-color: #38a169;
+}
+
+.column-tasks {
+  flex: 1;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 100px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.kanban-task {
+  background-color: white;
+  border-radius: 6px;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kanban-task:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.kanban-task.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.task-title {
+  font-weight: 500;
   margin-bottom: 0.5rem;
+  color: #2d3748;
+}
+
+.kanban-task .task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.kanban-task-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.kanban-task:hover .kanban-task-actions {
+  opacity: 1;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: #718096;
+  padding: 0.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.icon-btn:hover {
+  background-color: #f7fafc;
   color: #4a5568;
+}
+
+.icon-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+}
+
+.metadata-section {
+  padding: 1.5rem;
+}
+
+.metadata-section h3 {
+  margin-bottom: 1.5rem;
 }
 
 .project-tasks-section {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.tasks-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tasks-help {
+  color: #4a5568;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.task-actions-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .section-header {
@@ -881,5 +1240,18 @@ export default {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .kanban-board {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

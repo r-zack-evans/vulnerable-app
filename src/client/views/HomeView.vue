@@ -2,37 +2,31 @@
   <BaseLayout>
     <section class="welcome">
       <h1>{{ message }}</h1>
-      <p>Manage your enterprise projects with our comprehensive task management solution.</p>
-      <p>Track progress, assign resources, and meet your deadlines with confidence.</p>
+      <p class="subtitle">Simple, beautiful project management</p>
       
       <div v-if="!user" class="auth-buttons">
         <Button @click="$router.push('/login')" variant="primary" text="Login" />
         <Button @click="$router.push('/register')" variant="secondary" text="Register" />
       </div>
       
-      <div v-if="user" class="dashboard-link" style="margin-top: 20px;">
+      <div v-if="user" class="dashboard-link">
         <Button @click="$router.push('/projects')" variant="primary" text="Go to Dashboard" />
       </div>
     </section>
     
     <section class="features">
-      <h2>Enterprise Features</h2>
       <div class="feature-grid">
         <div class="feature-card">
           <h3>Task Management</h3>
-          <p>Create, assign, and track tasks across your organization with real-time updates.</p>
+          <p>Create, assign, and track tasks with ease</p>
         </div>
         <div class="feature-card">
           <h3>Project Dashboard</h3>
-          <p>Get a comprehensive view of all your projects with status tracking and priority management.</p>
+          <p>Comprehensive view of all your projects</p>
         </div>
         <div class="feature-card">
           <h3>Team Collaboration</h3>
-          <p>Assign team members to projects, manage permissions, and communicate effectively.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Advanced Reporting</h3>
-          <p>Generate detailed reports on project progress, resource allocation, and deadline tracking.</p>
+          <p>Seamless communication and task assignment</p>
         </div>
       </div>
     </section>
@@ -129,43 +123,79 @@ export default {
 <style scoped>
 .welcome {
   text-align: center;
+  margin-bottom: 3rem;
+  padding: 4rem 1rem;
+  background-color: #f0f7ff; /* Light pastel blue background */
+  border-radius: 1rem;
+}
+
+.welcome h1 {
+  color: #5c6bc0; /* Soft indigo */
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #7986cb; /* Lighter indigo */
   margin-bottom: 2rem;
 }
 
 .auth-buttons {
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.dashboard-link {
+  margin-top: 2rem;
+}
+
+.features {
+  padding: 3rem 1rem;
 }
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .feature-card {
-  background-color: #f8f9fa;
-  border-radius: 0.25rem;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-top: 4px solid #a5d6a7; /* Pastel green accent */
+}
+
+.feature-card:nth-child(2) {
+  border-top-color: #ffcc80; /* Pastel orange accent */
+}
+
+.feature-card:nth-child(3) {
+  border-top-color: #90caf9; /* Pastel blue accent */
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .feature-card h3 {
   margin-top: 0;
-  margin-bottom: 0.75rem;
-  color: #333;
+  margin-bottom: 1rem;
+  color: #455a64;
+  font-size: 1.35rem;
 }
 
 .feature-card p {
   margin: 0;
-  color: #6c757d;
-}
-
-.features h2 {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  color: #78909c;
+  line-height: 1.5;
 }
 </style>
