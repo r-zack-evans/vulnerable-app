@@ -251,7 +251,7 @@
                   </div>
                 </div>
               </div>
-              <span v-else-if="project.ownerId" class="owner-value">User ID: {{ project.ownerId }}</span>
+              <span v-else-if="project.ownerId" class="owner-value">{{ getUsernameById(project.ownerId) }}</span>
               <div v-else class="no-owner">
                 <i class="fas fa-user-slash"></i>
                 <span>No owner assigned</span>
