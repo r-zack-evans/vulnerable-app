@@ -109,58 +109,60 @@
               <div class="team-members-section">
                 <div v-if="usersLoading" class="loading-indicator">Loading users...</div>
                 <div v-else>
-                  <!-- Search input for finding team members -->
-                  <div class="team-members-search">
+                  <div class="team-member-search">
                     <input 
                       type="text" 
+                      id="teamMemberSearch"
                       v-model="teamMemberSearch" 
                       @input="searchTeamMembers"
                       @focus="teamMemberSearch ? searchTeamMembers() : showAllTeamMembers()"
-                      placeholder="Search or click to show all members..."
+                      placeholder="Search for team member by username or ID..."
                       class="search-input"
                     />
-                  </div>
-                  
-                  <!-- Display search results when searching -->
-                  <div v-if="filteredUsers.length > 0" class="search-results">
-                    <div v-for="user in filteredUsers" :key="user.id" class="search-result-item">
-                      <label>
-                        <input 
-                          type="checkbox" 
-                          :value="user.id" 
-                          v-model="projectForm.teamMembers" 
-                          :disabled="user.id === projectForm.ownerId"
-                        />
-                        <strong>{{ user.username }}</strong> <span class="user-id">(#{{ user.id }})</span>
-                        <span class="team-member-email" v-if="user.email">{{ user.email }}</span>
-                        <span class="team-member-info">({{ user.department }} - {{ user.jobTitle }})</span>
-                      </label>
+                    
+                    <div v-if="teamMemberSearchResults.length > 0" class="team-member-search-results">
+                      <div 
+                        v-for="user in teamMemberSearchResults" 
+                        :key="user.id" 
+                        class="team-member-search-item"
+                        @click="selectTeamMember(user)"
+                        :class="{ 'disabled': user.id === projectForm.ownerId || projectForm.teamMembers.includes(user.id) }"
+                      >
+                        <span class="team-member-avatar">
+                          <i class="fas fa-user"></i>
+                        </span>
+                        <div class="team-member-info">
+                          <span class="team-member-username"><strong>{{ user.username }}</strong> <span class="user-id">(#{{ user.id }})</span></span>
+                          <span class="team-member-position">
+                            {{ user.department }} {{ user.jobTitle ? (user.department ? ' - ' : '') + user.jobTitle : '' }}
+                          </span>
+                        </div>
+                        <div v-if="projectForm.teamMembers.includes(user.id)" class="already-selected">
+                          <i class="fas fa-check"></i>
+                        </div>
+                        <div v-else-if="user.id === projectForm.ownerId" class="owner-indicator">
+                          <i class="fas fa-user-shield"></i> Owner
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <!-- Show message when no users are found -->
-                  <div v-if="teamMemberSearch && filteredUsers.length === 0" class="no-results">
-                    No users found matching "{{ teamMemberSearch }}"
-                    <button @click="showAllTeamMembers()" class="show-all-button">Show all team members</button>
-                  </div>
-                  
-                  <!-- Show error message if there's an API error -->
-                  <div v-if="error" class="api-error">
-                    <p>{{ error }}</p>
-                    <button @click="retryFetchUsers()" class="retry-button">Retry</button>
-                  </div>
-                  
-                  <!-- Show message when no users have been loaded at all -->
-                  <div v-if="!teamMemberSearch && users.length === 0 && !usersLoading" class="no-results">
-                    <span v-if="error">{{ error }}</span>
-                    <span v-else>Click in the search box to load users</span>
-                    <button @click="retryFetchUsers()" class="retry-button">Load Users</button>
-                  </div>
-                  
-                  <!-- Loading indicator -->
-                  <div v-if="usersLoading" class="loading-indicator">
-                    <span class="loading-spinner"></span>
-                    <span>Loading users...</span>
+                    
+                    <div v-if="teamMemberSearch && teamMemberSearchResults.length === 0" class="no-results">
+                      No users found matching "{{ teamMemberSearch }}"
+                      <button @click="showAllTeamMembers()" class="show-all-button">Show all team members</button>
+                    </div>
+                    
+                    <!-- Show error message if there's an API error -->
+                    <div v-if="error" class="api-error">
+                      <p>{{ error }}</p>
+                      <button @click="retryFetchUsers()" class="retry-button">Retry</button>
+                    </div>
+                    
+                    <!-- Show message when no users have been loaded at all -->
+                    <div v-if="!teamMemberSearch && users.length === 0 && !usersLoading" class="no-results">
+                      <span v-if="error">{{ error }}</span>
+                      <span v-else>Click in the search box to load users</span>
+                      <button @click="retryFetchUsers()" class="retry-button">Load Users</button>
+                    </div>
                   </div>
                   
                   <!-- Selected members count and badges -->
@@ -168,10 +170,13 @@
                     <div class="selected-count">
                       {{ projectForm.teamMembers.length }} team member(s) selected
                     </div>
-                    <div v-if="projectForm.teamMembers.length > 0" class="selected-badges">
-                      <div v-for="memberId in projectForm.teamMembers" :key="memberId" class="selected-badge">
-                        {{ getUsernameById(memberId) }}
-                        <span class="remove-badge" @click="removeTeamMember(memberId)">&times;</span>
+                    <div v-if="projectForm.teamMembers.length > 0" class="selected-team-members">
+                      <div v-for="memberId in projectForm.teamMembers" :key="memberId" class="team-member-badge">
+                        <span class="team-member-badge-avatar">
+                          <i class="fas fa-user"></i>
+                        </span>
+                        <span class="team-member-badge-info">{{ getUsernameById(memberId) }}</span>
+                        <button type="button" class="clear-team-member" @click="removeTeamMember(memberId)" title="Remove team member">&times;</button>
                       </div>
                     </div>
                   </div>
@@ -299,7 +304,7 @@ export default {
       users: [],
       usersLoading: false,
       teamMemberSearch: '',
-      filteredUsers: [],
+      teamMemberSearchResults: [],
       ownerSearch: '',
       ownerSearchResults: [],
       errors: {}
@@ -330,8 +335,9 @@ export default {
       // Load users for team member and owner selection
       await this.fetchUsers()
       
-      // Initialize filtered users with all users for easier selection
-      this.filteredUsers = [...this.users];
+      // Initialize search results with all users for easier selection
+      this.teamMemberSearchResults = [...this.users];
+      this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
     },
     
     // Fetch users from the API properly
@@ -358,8 +364,9 @@ export default {
             jobTitle: user.jobTitle || 'Staff'
           }));
           
-          // Initialize filtered users with the loaded data
-          this.filteredUsers = [...this.users];
+          // Initialize search results with the loaded data
+          this.teamMemberSearchResults = [...this.users];
+          this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
           this.ownerSearchResults = [...this.users];
           
           // Sort owner results by role (managers first)
@@ -575,11 +582,13 @@ export default {
         // Always make sure we have users loaded
         if (this.users.length === 0) {
           this.fetchUsers().then(() => {
-            this.filteredUsers = [...this.users];
+            this.teamMemberSearchResults = [...this.users];
+            this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
           });
           return;
         }
-        this.filteredUsers = [...this.users];
+        this.teamMemberSearchResults = [...this.users];
+        this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
         return;
       }
 
@@ -588,7 +597,8 @@ export default {
       
       // For short search terms, just show all users
       if (searchTerm.length <= 2) {
-        this.filteredUsers = [...this.users];
+        this.teamMemberSearchResults = [...this.users];
+        this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
         return;
       }
       
@@ -618,7 +628,7 @@ export default {
         return;
       }
       
-      this.filteredUsers = this.users.filter(user => {
+      this.teamMemberSearchResults = this.users.filter(user => {
         if (!user) return false;
         
         // Match by username
@@ -643,7 +653,10 @@ export default {
         return false;
       });
       
-      console.log(`Found ${this.filteredUsers.length} matching team members`);
+      // Sort results by username
+      this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
+      
+      console.log(`Found ${this.teamMemberSearchResults.length} matching team members`);
     },
     
     
@@ -651,6 +664,19 @@ export default {
     getUsernameById(userId) {
       const user = this.users.find(u => u.id === userId);
       return user ? user.username : `User ${userId}`;
+    },
+    
+    // Select a user as team member
+    selectTeamMember(user) {
+      // Don't add if already a team member or is owner
+      if (user.id === this.projectForm.ownerId || this.projectForm.teamMembers.includes(user.id)) {
+        return;
+      }
+      
+      // Add to team members array
+      this.projectForm.teamMembers.push(user.id);
+      this.teamMemberSearch = '';
+      this.teamMemberSearchResults = [];
     },
     
     // Remove a team member from the selection
@@ -682,14 +708,16 @@ export default {
       // Make sure users are loaded
       if (this.users.length === 0) {
         this.fetchUsers().then(() => {
-          this.filteredUsers = [...this.users];
+          this.teamMemberSearchResults = [...this.users];
+          this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
         });
         return;
       }
       
       // Show all users
-      this.filteredUsers = [...this.users];
-      console.log(`Showing all ${this.filteredUsers.length} users for team member selection`);
+      this.teamMemberSearchResults = [...this.users];
+      this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
+      console.log(`Showing all ${this.teamMemberSearchResults.length} users for team member selection`);
     },
     
     async openEditModal(project) {
@@ -734,8 +762,9 @@ export default {
       // Load users and then update the filtered list
       await this.fetchUsers();
       
-      // Initialize filtered users with all users for easier selection
-      this.filteredUsers = [...this.users];
+      // Initialize search results with all users for easier selection
+      this.teamMemberSearchResults = [...this.users];
+      this.teamMemberSearchResults.sort((a, b) => a.username.localeCompare(b.username));
       
       // Fetch any missing team members if needed
       this.ensureTeamMembersData();
@@ -901,7 +930,7 @@ export default {
       // Reset search fields
       this.teamMemberSearch = '';
       this.ownerSearch = '';
-      this.filteredUsers = [];
+      this.teamMemberSearchResults = [];
       this.ownerSearchResults = [];
     },
     viewProject(id) {
@@ -944,6 +973,140 @@ export default {
 </script>
 
 <style scoped>
+/* Team Member search styles */
+.team-member-search {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.team-member-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.team-member-search-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.team-member-search-item:hover {
+  background-color: #f5f5f5;
+}
+
+.team-member-search-item:last-child {
+  border-bottom: none;
+}
+
+.team-member-search-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.team-member-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #eee;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+}
+
+.team-member-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.team-member-username {
+  font-size: 0.9rem;
+}
+
+.team-member-position {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.already-selected,
+.owner-indicator {
+  font-size: 0.8rem;
+  color: #0d6efd;
+  border-left: 1px solid #eee;
+  padding-left: 0.75rem;
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.owner-indicator {
+  color: #198754;
+}
+
+.already-selected i,
+.owner-indicator i {
+  margin-right: 0.4rem;
+}
+
+.selected-team-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.team-member-badge {
+  display: flex;
+  align-items: center;
+  background-color: #f0f7ff;
+  border: 1px solid #cce5ff;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.team-member-badge-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: white;
+  margin-right: 0.5rem;
+}
+
+.team-member-badge-info {
+  flex: 1;
+}
+
+.clear-team-member {
+  background: transparent;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.clear-team-member:hover {
+  color: #dc3545;
+}
 .projects-view {
   padding: 1rem;
 }
@@ -1174,6 +1337,7 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  overflow-y: auto;
 }
 
 .modal-content {
@@ -1182,7 +1346,10 @@ export default {
   padding: 2rem;
   width: 100%;
   max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 2rem 0;
 }
 
 .form-actions, .modal-actions {

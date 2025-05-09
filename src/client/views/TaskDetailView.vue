@@ -55,10 +55,49 @@
             
             <div class="form-group">
               <label for="assignedTo">Assigned To</label>
-              <select id="assignedTo" v-model="editForm.assignedTo">
-                <option value="">Unassigned</option>
-                <option v-for="user in users" :key="user.id" :value="user.id">{{ user.username }}</option>
-              </select>
+              <div class="assignee-search">
+                <input 
+                  type="text" 
+                  id="assigneeSearch"
+                  v-model="assigneeSearch" 
+                  @input="searchAssignee"
+                  placeholder="Search for user by username..."
+                  class="search-input"
+                />
+                
+                <div v-if="assigneeSearch && assigneeSearchResults.length > 0" class="assignee-search-results">
+                  <div 
+                    v-for="user in assigneeSearchResults" 
+                    :key="user.id" 
+                    class="assignee-search-item"
+                    @click="selectAssignee(user)"
+                  >
+                    <span class="assignee-avatar">
+                      <i class="fas fa-user"></i>
+                    </span>
+                    <div class="assignee-info">
+                      <span class="assignee-username"><strong>{{ user.username }}</strong></span>
+                      <span class="assignee-position" v-if="user.department || user.jobTitle">
+                        {{ user.department }} {{ user.jobTitle ? (user.department ? '- ' : '') + user.jobTitle : '' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="assigneeSearch && assigneeSearchResults.length === 0" class="no-results">
+                  No users found matching "{{ assigneeSearch }}"
+                </div>
+                
+                <div v-if="editForm.assignedTo" class="selected-assignee">
+                  <div class="assignee-badge">
+                    <span class="assignee-badge-avatar">
+                      <i class="fas fa-user"></i>
+                    </span>
+                    <span class="assignee-badge-info">Assigned to: {{ getAssigneeName() }}</span>
+                    <button type="button" class="clear-assignee" @click="clearAssignee()" title="Remove assignee">&times;</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -184,6 +223,8 @@ export default {
       loading: true,
       error: null,
       isEditMode: false,
+      assigneeSearch: '',
+      assigneeSearchResults: [],
       editForm: {
         title: '',
         description: '',
@@ -328,8 +369,76 @@ export default {
       this.populateEditForm()
     },
     
+    // Search for assignee by username or ID
+    searchAssignee() {
+      if (!this.assigneeSearch.trim()) {
+        this.assigneeSearchResults = [];
+        return;
+      }
+
+      const searchTerm = this.assigneeSearch.toLowerCase().trim();
+      this.assigneeSearchResults = this.users.filter(user => {
+        // Match by username
+        if (user.username.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Match by user ID (if search term is a number)
+        if (!isNaN(searchTerm) && user.id === parseInt(searchTerm)) {
+          return true;
+        }
+        
+        // Match by department or job title
+        if (user.department && user.department.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        if (user.jobTitle && user.jobTitle.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        return false;
+      });
+    },
+    
+    // Select a user as task assignee
+    selectAssignee(user) {
+      this.editForm.assignedTo = user.id;
+      this.assigneeSearch = '';
+      this.assigneeSearchResults = [];
+    },
+    
+    // Clear the selected assignee
+    clearAssignee() {
+      this.editForm.assignedTo = '';
+    },
+    
+    // Get the name of the selected assignee
+    getAssigneeName() {
+      if (!this.editForm.assignedTo) return '';
+      
+      const assignee = this.users.find(u => u.id === this.editForm.assignedTo);
+      if (assignee) {
+        let roleInfo = '';
+        
+        if (assignee.jobTitle) {
+          roleInfo += assignee.jobTitle;
+        }
+        
+        if (assignee.department) {
+          roleInfo += roleInfo ? ` (${assignee.department})` : assignee.department;
+        }
+        
+        return roleInfo ? `${assignee.username} - ${roleInfo}` : assignee.username;
+      }
+      
+      return `User ${this.editForm.assignedTo}`;
+    },
+    
     cancelEdit() {
-      this.isEditMode = false
+      this.isEditMode = false;
+      this.assigneeSearch = '';
+      this.assigneeSearchResults = [];
     },
     
     formatDate(dateString) {
@@ -404,6 +513,123 @@ export default {
 </script>
 
 <style scoped>
+.assignee-search {
+  position: relative;
+}
+
+.search-input {
+  padding: 0.65rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  width: 100%;
+}
+
+.assignee-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.assignee-search-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.assignee-search-item:hover {
+  background-color: #f5f5f5;
+}
+
+.assignee-search-item:last-child {
+  border-bottom: none;
+}
+
+.assignee-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #eee;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+}
+
+.assignee-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.assignee-username {
+  font-size: 0.9rem;
+}
+
+.assignee-position {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.no-results {
+  padding: 0.75rem;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+.selected-assignee {
+  margin-top: 0.75rem;
+}
+
+.assignee-badge {
+  display: flex;
+  align-items: center;
+  background-color: #f0f7ff;
+  border: 1px solid #cce5ff;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.assignee-badge-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: white;
+  margin-right: 0.5rem;
+}
+
+.assignee-badge-info {
+  flex: 1;
+}
+
+.clear-assignee {
+  background: transparent;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.clear-assignee:hover {
+  color: #dc3545;
+}
 .task-detail-view {
   padding: 2rem 0;
   max-width: 900px;
