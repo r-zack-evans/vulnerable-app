@@ -6,6 +6,12 @@ import bodyParser from 'body-parser';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { createConnection } from 'typeorm';
+import helmet from 'helmet';
+import cors from 'cors';
+import { config } from './config';
+
+// Import security middleware
+import { xssProtection, loginRateLimiter } from './middleware/auth';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import productRoutes from './routes/product.routes';
@@ -57,23 +63,30 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// VULNERABILITY: Session secret hardcoded and not secure
+// Configure secure session
 app.use(session({
-  secret: 'supersecretkey', // VULNERABILITY: Hardcoded secret
+  secret: config.session.secret,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false, // Only save session when data exists
   cookie: { 
-    secure: false, // VULNERABILITY: Insecure cookies in production
-    httpOnly: false // VULNERABILITY: Cookies accessible via JavaScript
+    secure: process.env.NODE_ENV === 'production', // HTTPS in production
+    httpOnly: true, // Not accessible via JavaScript
+    sameSite: 'strict' // CSRF protection
   }
 }));
 
-// VULNERABILITY: No CORS configuration
-// VULNERABILITY: No helmet for security headers
+// Apply security middleware
+app.use(helmet()); // Set security headers
+app.use(xssProtection); // Additional XSS protection
 
-// Global variable to track login attempts (VULNERABILITY: Should use a proper rate limiter)
-const loginAttempts: Record<string, number> = {};
-global.loginAttempts = loginAttempts;
+// Configure CORS properly
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : 'http://localhost:3000',
+  credentials: true
+}));
+
+// Apply rate limiting to authentication routes
+app.use('/auth/login', loginRateLimiter);
 
 // Routes
 app.use('/auth', authRoutes);
@@ -103,18 +116,16 @@ app.get('*', (req, res, next) => {
   next();
 });
 
-// VULNERABILITY: Detailed error exposure
+// Secure error handling - don't expose sensitive details
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
   
-  // API requests return JSON errors
+  // API requests return JSON errors with limited information
   if (req.path.startsWith('/api')) {
-    // VULNERABILITY: Exposing detailed error information in JSON
+    // Send generic error without exposing stack traces or details
     return res.status(500).json({
       error: 'Server Error',
-      message: err.message,
-      stack: err.stack, // VULNERABILITY: Exposing stack trace
-      details: err
+      message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
     });
   }
   

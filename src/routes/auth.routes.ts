@@ -1,36 +1,48 @@
 import express from 'express';
 import { getRepository } from 'typeorm';
 import { User } from '../entity/User';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { config } from '../config';
+import csrf from 'csurf';
 
 const router = express.Router();
 
+// CSRF protection middleware
+const csrfProtection = csrf({ cookie: true });
+
 // Register a new user
-router.post('/register', async (req, res) => {
+router.post('/register', csrfProtection, async (req, res) => {
   const { username, password, email } = req.body;
   
   try {
     const userRepository = getRepository(User);
     
-    // VULNERABILITY: No input validation
-    // VULNERABILITY: No password complexity check
+    // Input validation
+    if (!username || !password || !email) {
+      return res.status(400).json({
+        success: false,
+        error: 'All fields are required'
+      });
+    }
     
-    // VULNERABILITY: Some users created with plaintext passwords (simulating legacy users)
+    // Password complexity check
+    if (password.length < config.security.passwordMinLength) {
+      return res.status(400).json({
+        success: false,
+        error: `Password must be at least ${config.security.passwordMinLength} characters long`
+      });
+    }
+    
     const user = new User();
     user.username = username;
     user.email = email;
     
-    if (Math.random() > 0.5) { // Randomly decide between secure and insecure methods
-      // Secure way: hash password
-      const salt = await bcrypt.genSalt(10);
-      user.passwordHash = await bcrypt.hash(password, salt);
-      user.password = '[HASHED]'; // Placeholder for the hashed version
-    } else {
-      // VULNERABILITY: Insecure way: store plaintext password
-      user.password = password;
-      user.passwordHash = null;
-    }
+    // Always hash passwords - no plaintext storage
+    const salt = await bcrypt.genSalt(config.security.bcryptSaltRounds);
+    user.passwordHash = await bcrypt.hash(password, salt);
+    // Set password field to null - we don't store plaintext passwords anymore
+    user.password = null;
     
     await userRepository.save(user);
     
@@ -52,108 +64,114 @@ router.post('/register', async (req, res) => {
 // Login endpoint now only used by API
 
 // Process login
-router.post('/login', async (req, res) => {
+router.post('/login', csrfProtection, async (req, res) => {
   const { username, password } = req.body;
   
   try {
-    // VULNERABILITY: SQL injection in direct query
-    // Note: In actual TypeORM usage, we would use the repository pattern, but we're
-    // intentionally using a raw query to demonstrate SQL injection
+    // Use repository pattern with TypeORM to prevent SQL injection
     const userRepository = getRepository(User);
     
-    // VULNERABILITY: Constructing a raw SQL query using user input
-    const rawQuery = `SELECT * FROM user WHERE username = '${username}'`;
-    const user = await userRepository.query(rawQuery);
+    // Use safe TypeORM methods instead of raw SQL queries
+    const user = await userRepository.findOne({ where: { username } });
     
-    if (user.length === 0) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     let isValidPassword = false;
     
-    // Check if we have a plaintext password or a hashed password
-    if (user[0].passwordHash) {
+    // Check if we have a passwordHash - all users should have this after migration
+    if (user.passwordHash) {
       // Compare with hashed password
-      isValidPassword = await bcrypt.compare(password, user[0].passwordHash);
+      isValidPassword = await bcrypt.compare(password, user.passwordHash);
     } else {
-      // VULNERABILITY: Compare with plaintext password
-      isValidPassword = (password === user[0].password);
+      // Temporary transition code for legacy users - should be removed after all users migrated
+      // Immediately hash their password when they log in
+      if (user.password === password) {
+        isValidPassword = true;
+        const salt = await bcrypt.genSalt(config.security.bcryptSaltRounds);
+        user.passwordHash = await bcrypt.hash(password, salt);
+        user.password = null;
+        await userRepository.save(user);
+      }
     }
     
     if (!isValidPassword) {
-      // VULNERABILITY: No rate limiting on failed attempts
-      return res.status(401).json({ error: 'Invalid username or password' });
+      // Rate limiting should be implemented in middleware
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // VULNERABILITY: Insecure JWT implementation
+    // Secure JWT implementation
     const token = jwt.sign(
-      { id: user[0].id, username: user[0].username, role: user[0].role },
-      'supersecretkey', // VULNERABILITY: Hardcoded secret
+      { id: user.id, username: user.username, role: user.role },
+      config.jwt.secret,
       { expiresIn: '24h' }
     );
     
     // Set user in session
     req.session.user = {
-      id: user[0].id,
-      username: user[0].username,
-      role: user[0].role
+      id: user.id,
+      username: user.username,
+      role: user.role
     };
     
-    // VULNERABILITY: JWT stored in cookie without proper security flags
+    // Set JWT cookie with proper security flags
     res.cookie('auth_token', token, { 
-      httpOnly: false,  // VULNERABILITY: Accessible via JavaScript
-      secure: false     // VULNERABILITY: Transmitted over HTTP
+      httpOnly: true,  // Not accessible via JavaScript
+      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      sameSite: 'strict' // CSRF protection
     });
     
     // Return user data and token
     res.json({
       token,
       user: {
-        id: user[0].id,
-        username: user[0].username,
-        role: user[0].role,
-        email: user[0].email
-      }
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email
+      },
+      csrfToken: req.csrfToken() // Send CSRF token for future requests
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({
-      error: 'Login failed',
-      details: err.message,
-      stack: err.stack // VULNERABILITY: Exposing stack trace
+      error: 'Login failed'
+      // Removed stack trace exposure
     });
   }
 });
 
 // Password reset request
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', csrfProtection, async (req, res) => {
   const { email } = req.body;
   
   try {
     const userRepository = getRepository(User);
-    const user = await userRepository.findOne({ where: { email } });
     
-    if (!user) {
-      // VULNERABILITY: User enumeration - different response when user exists
-      return res.status(404).json({ error: 'No user with that email' });
-    }
+    // IMPORTANT: Always return the same response whether or not the email exists
+    // to prevent user enumeration
     
-    // Generate reset token (insecurely)
-    // VULNERABILITY: Predictable token
-    const resetToken = Math.random().toString(36).substring(2, 15);
+    // Generate cryptographically secure token
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
     
-    user.resetToken = resetToken;
-    user.resetTokenExpiry = resetTokenExpiry;
-    await userRepository.save(user);
+    // Only proceed with updating if user exists (but don't change response)
+    const user = await userRepository.findOne({ where: { email } });
+    if (user) {
+      user.resetToken = resetToken;
+      user.resetTokenExpiry = resetTokenExpiry;
+      await userRepository.save(user);
+      
+      // NOTE: In a real app, you would send an email with the reset link
+      // Instead of exposing it in the API response
+      console.log(`Reset token for ${email}: ${resetToken}`);
+    }
     
-    // VULNERABILITY: Token exposed in response
+    // Same response whether or not email exists
     res.json({ 
-      message: 'Password reset link sent', 
-      // VULNERABILITY: Reset token sent in response
-      resetToken: resetToken,
-      email: email,
-      resetUrl: `/auth/reset-password?token=${resetToken}&email=${email}`
+      message: 'If an account exists with that email, a password reset link has been sent.' 
     });
   } catch (err) {
     console.error(err);

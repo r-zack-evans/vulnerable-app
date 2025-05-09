@@ -4,7 +4,7 @@ const { Database } = sqlite3.verbose();
 // Define types for user data
 interface User {
   username: string;
-  password: string;
+  password?: string | null;
   passwordHash: string;
   email: string;
   role: string;
@@ -55,7 +55,6 @@ function createUsers(db: sqlite3.Database): void {
     // Keep admin user
     {
       username: 'admin',
-      password: 'admin123', // This would be hashed in production
       passwordHash: '$2b$10$rQkWM5CwWDYS1j/dCRY1KuHfz4NFq4HEGirxy7TmQTTWDn9lkLZXO', // hash for 'admin123'
       email: 'admin@example.com',
       role: 'admin',
@@ -67,7 +66,6 @@ function createUsers(db: sqlite3.Database): void {
     // Keep regular user
     {
       username: 'user',
-      password: 'password123',
       passwordHash: '$2b$10$jDW2skBHRjH9JwumTaY72O8d0FOYaYiCNR74KFnULvQZK.JWEPQwa', // hash for 'password123'
       email: 'user@example.com',
       role: 'user',
@@ -79,7 +77,6 @@ function createUsers(db: sqlite3.Database): void {
     // 13 Engineers with _eng suffix
     {
       username: 'john_eng',
-      password: 'pass123',
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'john@example.com',
       role: 'user',
@@ -90,7 +87,6 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'maria_eng',
-      password: 'pass123',
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'maria@example.com',
       role: 'user',
@@ -101,7 +97,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'james_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'james@example.com',
       role: 'user',
@@ -112,7 +108,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'alex_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'alex@example.com',
       role: 'user',
@@ -123,7 +119,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'sarah_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'sarah@example.com',
       role: 'user',
@@ -134,7 +130,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'david_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'david@example.com',
       role: 'user',
@@ -145,7 +141,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'lisa_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'lisa@example.com',
       role: 'user',
@@ -156,7 +152,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'michael_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'michael@example.com',
       role: 'user',
@@ -167,7 +163,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'emma_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'emma@example.com',
       role: 'user',
@@ -178,7 +174,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'ryan_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'ryan@example.com',
       role: 'user',
@@ -189,7 +185,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'olivia_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'olivia@example.com',
       role: 'user',
@@ -200,7 +196,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'charlie_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'charlie@example.com',
       role: 'user',
@@ -211,7 +207,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'sophia_eng',
-      password: 'pass123',
+
       passwordHash: '$2b$10$dUG.KQltgFmUyfUZ5fQcsu/ROXGy45YcBZ9XNYiF5CKC0CnCy5RZW',
       email: 'sophia@example.com',
       role: 'user',
@@ -223,7 +219,7 @@ function createUsers(db: sqlite3.Database): void {
     // 5 Project Managers with _pm suffix
     {
       username: 'robert_pm',
-      password: 'manager123',
+
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'robert@example.com',
       role: 'project_manager',  // Changed to project_manager role
@@ -234,7 +230,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'jennifer_pm',
-      password: 'manager123',
+
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'jennifer@example.com',
       role: 'project_manager',  // Changed to project_manager role
@@ -245,7 +241,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'william_pm',
-      password: 'manager123',
+
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'william@example.com',
       role: 'project_manager',  // Changed to project_manager role
@@ -256,7 +252,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'emily_pm',
-      password: 'manager123',
+
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'emily@example.com',
       role: 'project_manager',  // Changed to project_manager role
@@ -267,7 +263,7 @@ function createUsers(db: sqlite3.Database): void {
     },
     {
       username: 'daniel_pm',
-      password: 'manager123',
+
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'daniel@example.com',
       role: 'project_manager',  // Changed to project_manager role
@@ -292,7 +288,7 @@ function createUsers(db: sqlite3.Database): void {
       users.forEach((user, index) => {
         userStmt.run(
           user.username,
-          user.password,
+          null, // Set password to null as we're migrating to passwordHash
           user.passwordHash,
           user.email,
           user.role,

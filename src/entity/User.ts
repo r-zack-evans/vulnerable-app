@@ -8,8 +8,8 @@ export class User {
   @Column()
   username: string;
 
-  @Column()
-  password: string; // VULNERABILITY: Stored as plaintext in some cases
+  @Column({ nullable: true })
+  password: string; // Now nullable for security - we've migrated to passwordHash
 
   @Column({ nullable: true })
   passwordHash: string;

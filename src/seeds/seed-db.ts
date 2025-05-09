@@ -32,13 +32,20 @@ interface Task {
 function seedDatabase(): void {
   console.log('Preparing database for seeding...');
   
-  // First seed users if needed
-  seedUsers();
-  
-  const db = new Database('./vuln_app.sqlite');
-  
-  // Clear existing data and seed fresh data
-  clearAndSeedData(db);
+  // First seed users if needed, then proceed with other data
+  try {
+    // Use a setTimeout to ensure user seed process has closed its connection
+    seedUsers();
+    
+    // Wait a moment to avoid database locking issues
+    setTimeout(() => {
+      const db = new Database('./vuln_app.sqlite');
+      // Clear existing data and seed fresh data
+      clearAndSeedData(db);
+    }, 1000);
+  } catch (error) {
+    console.error('Error in database seeding:', error);
+  }
 }
 
 // Function to clear existing data and seed fresh data
