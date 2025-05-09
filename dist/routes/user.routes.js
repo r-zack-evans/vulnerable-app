@@ -36,6 +36,94 @@ router.get('/profile', auth_1.checkAuth, async (req, res) => {
     }
 });
 // Update user profile
+router.put('/profile', auth_1.checkAuth, async (req, res) => {
+    try {
+        const { email, department, jobTitle, profilePicture, preferences, currentPassword, newPassword } = req.body;
+        const userRepository = (0, typeorm_1.getRepository)(User_1.User);
+        const user = await userRepository.findOne({ where: { id: req.session.user.id } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        // Only allow username changes if user is admin
+        if (req.body.username && user.role === 'admin') {
+            user.username = req.body.username;
+        }
+        // Only update fields that are allowed to be changed
+        if (email) {
+            // Basic email validation
+            if (!/^\S+@\S+\.\S+$/.test(email)) {
+                return res.status(400).json({ error: 'Invalid email format' });
+            }
+            user.email = email;
+        }
+        if (department !== undefined) {
+            user.department = department;
+        }
+        if (jobTitle !== undefined) {
+            user.jobTitle = jobTitle;
+        }
+        if (profilePicture !== undefined) {
+            user.profilePicture = profilePicture;
+        }
+        // Update preferences
+        if (preferences) {
+            user.preferences = {
+                theme: preferences.theme || 'light',
+                notifications: preferences.notifications !== undefined ? preferences.notifications : true,
+                dashboardLayout: preferences.dashboardLayout || 'grid'
+            };
+        }
+        // Handle password change if requested
+        if (currentPassword && newPassword) {
+            // Password length validation
+            if (newPassword.length < 8) {
+                return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+            }
+            // Check current password
+            let passwordValid = false;
+            if (user.passwordHash) {
+                // Using hashed password
+                const bcrypt = require('bcrypt');
+                passwordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+            }
+            else {
+                // Using plaintext password
+                passwordValid = (currentPassword === user.password);
+            }
+            if (!passwordValid) {
+                return res.status(401).json({ error: 'Current password is incorrect' });
+            }
+            // Update to new password
+            const bcrypt = require('bcrypt');
+            const salt = await bcrypt.genSalt(10);
+            user.passwordHash = await bcrypt.hash(newPassword, salt);
+            user.password = '[HASHED]'; // Placeholder for the hashed version
+        }
+        await userRepository.save(user);
+        // Update session data
+        req.session.user = {
+            id: user.id,
+            username: user.username,
+            role: user.role
+        };
+        // Return the updated user data (excluding sensitive fields)
+        res.status(200).json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            department: user.department,
+            jobTitle: user.jobTitle,
+            profilePicture: user.profilePicture,
+            preferences: user.preferences,
+            isVerified: user.isVerified
+        });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Server error', message: err.message });
+    }
+});
+// Legacy support for POST method
 router.post('/profile', auth_1.checkAuth, upload.single('profilePicture'), async (req, res) => {
     try {
         const { username, email, theme, notifications } = req.body;

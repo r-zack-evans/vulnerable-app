@@ -53,6 +53,11 @@ export default [
     component: () => import('../views/TasksView.vue')
   },
   {
+    path: '/users/profile',
+    name: 'user-profile',
+    component: () => import('../views/ProfileView.vue')
+  },
+  {
     path: '/admin',
     name: 'admin',
     component: () => import('../views/AdminView.vue'),
