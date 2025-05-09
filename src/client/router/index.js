@@ -50,7 +50,7 @@ export default [
   {
     path: '/tasks/:id',
     name: 'task-detail',
-    component: () => import('../views/TasksView.vue')
+    component: () => import('../views/TaskDetailView.vue')
   },
   {
     path: '/users/profile',

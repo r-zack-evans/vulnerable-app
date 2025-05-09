@@ -96,15 +96,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="task in filteredTasks" :key="task.id" class="task-row">
+            <tr v-for="task in filteredTasks" :key="task.id" class="task-row" @click="viewTask(task.id)">
               <td class="task-name-cell">
-                <h3 class="task-name">{{ task.title }}</h3>
+                <h3 class="task-name">
+                  {{ task.title }}
+                </h3>
                 <!-- VULNERABILITY: Rendering unsanitized HTML from the server -->
                 <p class="description" v-html="task.description"></p>
               </td>
               <td class="project-cell">
                 <!-- Display project name and make it clickable -->
-                <span v-if="getProjectName(task.projectId)" class="project-link" @click="viewProject(task.projectId)">
+                <span v-if="getProjectName(task.projectId)" class="project-link" @click.stop="viewProject(task.projectId)">
                   {{ getProjectName(task.projectId) }}
                 </span>
                 <span v-else class="not-assigned">Not assigned</span>
@@ -125,10 +127,10 @@
                 <span v-else>No due date</span>
               </td>
               <td class="actions-cell">
-                <span class="action-icon edit-icon" @click="openEditModal(task)" title="Edit Task">
+                <span class="action-icon edit-icon" @click.stop="openEditModal(task)" title="Edit Task">
                   <i class="fas fa-pen"></i>
                 </span>
-                <span class="action-icon delete-icon" @click="confirmDeleteTask(task)" title="Delete Task">
+                <span class="action-icon delete-icon" @click.stop="confirmDeleteTask(task)" title="Delete Task">
                   <i class="fas fa-trash-alt"></i>
                 </span>
               </td>
@@ -387,6 +389,10 @@ export default {
     viewProject(id) {
       this.$router.push(`/projects/${id}`)
     },
+    
+    viewTask(id) {
+      this.$router.push(`/tasks/${id}`)
+    },
 
     confirmDeleteTask(task) {
       this.taskToDelete = task
@@ -462,18 +468,33 @@ export default {
   padding: 1rem;
   font-weight: 600;
   color: #4a5568;
-  border-bottom: 1px solid #f0f4f8;
+  border-bottom: 2px solid #e2e8f0;
   background-color: #f8fafc;
 }
 
 .tasks-table td {
   padding: 1rem;
   vertical-align: top;
+  border-bottom: none;
+}
+
+.task-row {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  cursor: pointer;
+  background-color: #ffffff;
   border-bottom: 1px solid #f0f4f8;
 }
 
+.task-row td {
+  border-bottom: none;
+}
+
 .task-row:hover {
-  background-color: #f8fafd;
+  background-color: #f0f7ff; /* Light pastel blue */
+  transform: translateY(-3px);
+  box-shadow: 0 3px 15px rgba(92, 107, 192, 0.1);
+  z-index: 1;
 }
 
 .task-name-cell {
@@ -486,6 +507,16 @@ export default {
   color: #2d3748;
 }
 
+.task-name {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.task-name:hover {
+  color: #4299e1;
+  text-decoration: underline;
+}
+
 .project-cell {
   min-width: 150px;
 }
@@ -494,12 +525,19 @@ export default {
   color: #3182ce;
   cursor: pointer;
   font-weight: 500;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
+  display: inline-block;
 }
 
 .project-link:hover {
   text-decoration: underline;
   color: #2c5282;
+  transform: translateX(2px);
+}
+
+/* Keep for future reference but not in use now */
+.task-link {
+  display: none;
 }
 
 .not-assigned {
