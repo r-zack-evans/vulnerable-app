@@ -29,8 +29,10 @@ createConnection({
   
   // Seed the database with example data
   try {
-    const seedDatabase = require('../seed-db');
-    seedDatabase();
+    import('./seeds/seed-db').then(module => {
+      const seedDatabase = module.default;
+      seedDatabase();
+    });
   } catch (seedError) {
     console.log('Error seeding database:', seedError);
   }
