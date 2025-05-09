@@ -13,7 +13,11 @@
     "build:client": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.vue",
-    "test": "jest"
+    "test": "jest",
+    "seed": "ts-node src/seeds/run.ts",
+    "seed:users": "ts-node src/seeds/seed-users.ts",
+    "seed:db": "ts-node src/seeds/seed-db.ts",
+    "seed:tasks": "ts-node src/seeds/seed-tasks.ts"
   },
   "keywords": [
     "security",
