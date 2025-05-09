@@ -506,12 +506,15 @@ router.put('/users/profile', async (req, res) => {
         // Get user ID from token or session
         const token = req.headers.authorization?.split(' ')[1];
         let userId;
+        let userRole;
         if (token) {
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
             userId = decoded.id;
+            userRole = decoded.role;
         }
         else if (req.session.user) {
             userId = req.session.user.id;
+            userRole = req.session.user.role;
         }
         else {
             return res.status(401).json({ error: 'Not authenticated' });
@@ -521,15 +524,85 @@ router.put('/users/profile', async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // VULNERABILITY: Mass assignment, allowing any field to be updated
-        // including role, which could lead to privilege escalation
-        Object.assign(user, req.body);
+        // Create a safe update object with only permitted fields
+        const safeUpdate = {};
+        // Always allowed fields for any user
+        if (req.body.email !== undefined) {
+            // Basic email validation
+            if (!/^\S+@\S+\.\S+$/.test(req.body.email)) {
+                return res.status(400).json({ error: 'Invalid email format' });
+            }
+            safeUpdate.email = req.body.email;
+        }
+        if (req.body.department !== undefined) {
+            safeUpdate.department = req.body.department;
+        }
+        if (req.body.jobTitle !== undefined) {
+            safeUpdate.jobTitle = req.body.jobTitle;
+        }
+        if (req.body.profilePicture !== undefined) {
+            safeUpdate.profilePicture = req.body.profilePicture;
+        }
+        // Preferences
+        if (req.body.preferences) {
+            safeUpdate.preferences = {
+                theme: req.body.preferences.theme || user.preferences?.theme || 'light',
+                notifications: req.body.preferences.notifications !== undefined ? req.body.preferences.notifications : user.preferences?.notifications || true,
+                dashboardLayout: req.body.preferences.dashboardLayout || user.preferences?.dashboardLayout || 'grid'
+            };
+        }
+        // Password change
+        if (req.body.currentPassword && req.body.newPassword) {
+            // Password length validation
+            if (req.body.newPassword.length < 8) {
+                return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+            }
+            // Check current password
+            let passwordValid = false;
+            if (user.passwordHash) {
+                // Using hashed password
+                passwordValid = await bcrypt_1.default.compare(req.body.currentPassword, user.passwordHash);
+            }
+            else {
+                // Using plaintext password
+                passwordValid = (req.body.currentPassword === user.password);
+            }
+            if (!passwordValid) {
+                return res.status(401).json({ error: 'Current password is incorrect' });
+            }
+            // Update to new password
+            const salt = await bcrypt_1.default.genSalt(10);
+            safeUpdate.passwordHash = await bcrypt_1.default.hash(req.body.newPassword, salt);
+            safeUpdate.password = '[HASHED]'; // Placeholder for the hashed version
+        }
+        // Only admins can update username and role
+        if (userRole === 'admin') {
+            if (req.body.username !== undefined) {
+                safeUpdate.username = req.body.username;
+            }
+            if (req.body.role !== undefined) {
+                safeUpdate.role = req.body.role;
+            }
+        }
+        // Apply safe updates to user
+        Object.assign(user, safeUpdate);
+        // Save changes
         await userRepository.save(user);
+        // Update session data if needed
+        if (req.session.user && safeUpdate.username) {
+            req.session.user.username = user.username;
+        }
+        // Return updated user data (excluding sensitive fields)
         return res.json({
             id: user.id,
             username: user.username,
             email: user.email,
-            role: user.role
+            role: user.role,
+            department: user.department,
+            jobTitle: user.jobTitle,
+            profilePicture: user.profilePicture,
+            preferences: user.preferences,
+            isVerified: user.isVerified
         });
     }
     catch (err) {
