@@ -1,5 +1,5 @@
 <template>
-  <div class="alert" :class="alertClass" role="alert">
+  <div class="py-3 px-5 mb-4 rounded" :class="alertClass" role="alert">
     <slot>{{ message }}</slot>
   </div>
 </template>
@@ -20,36 +20,18 @@ export default {
   },
   computed: {
     alertClass() {
-      return `alert-${this.type}`
+      const classes = {
+        'info': 'bg-blue-100 text-blue-800',
+        'success': 'bg-green-100 text-green-800',
+        'warning': 'bg-yellow-100 text-yellow-800',
+        'danger': 'bg-red-100 text-red-800'
+      };
+      return classes[this.type];
     }
   }
 }
 </script>
 
 <style scoped>
-.alert {
-  padding: 0.75rem 1.25rem;
-  margin-bottom: 1rem;
-  border-radius: 0.25rem;
-}
-
-.alert-info {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.alert-warning {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.alert-danger {
-  background-color: #f8d7da;
-  color: #721c24;
-}
+/* All styles have been replaced with Tailwind utility classes */
 </style>

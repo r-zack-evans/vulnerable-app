@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-links">
+  <div class="flex justify-between mt-6 text-sm">
     <slot></slot>
   </div>
 </template>
@@ -11,19 +11,7 @@ export default {
 </script>
 
 <style scoped>
-.auth-links {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1.5rem;
-  font-size: 0.9rem;
-}
+/* All styles have been replaced with Tailwind utility classes */
 
-.auth-links a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.auth-links a:hover {
-  text-decoration: underline;
-}
+/* Links style can be added directly to links with class="text-blue-600 hover:underline" */
 </style>

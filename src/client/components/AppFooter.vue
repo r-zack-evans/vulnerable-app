@@ -1,8 +1,8 @@
 <template>
-  <footer class="app-footer">
+  <footer class="bg-white text-gray-800 py-4 mt-8 border-t border-gray-200">
     <div class="container">
-      <div class="footer-content">
-        <div class="copyright">
+      <div class="flex justify-center text-sm">
+        <div class="text-gray-500">
           &copy; {{ currentYear }} ProjectTrack
         </div>
       </div>
@@ -22,27 +22,5 @@ export default {
 </script>
 
 <style scoped>
-.app-footer {
-  background-color: white;
-  color: #333;
-  padding: 1rem 0;
-  margin-top: 2rem;
-  border-top: 1px solid #eaeaea;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 15px;
-}
-
-.footer-content {
-  display: flex;
-  justify-content: center;
-  font-size: 0.9rem;
-}
-
-.copyright {
-  color: #666;
-}
+/* All styles have been replaced with Tailwind utility classes */
 </style>
