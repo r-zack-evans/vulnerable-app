@@ -1,8 +1,8 @@
 <template>
-  <div class="form-group">
-    <label v-if="label" :for="id">{{ label }}</label>
+  <div class="mb-4">
+    <label v-if="label" :for="id" class="block mb-2 font-bold">{{ label }}</label>
     <slot></slot>
-    <div v-if="error" class="form-error">{{ error }}</div>
+    <div v-if="error" class="text-red-700 text-sm mt-1">{{ error }}</div>
   </div>
 </template>
 
@@ -27,19 +27,5 @@ export default {
 </script>
 
 <style scoped>
-.form-group {
-  margin-bottom: 1rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-
-.form-error {
-  color: #721c24;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
+/* All styles have been replaced with Tailwind utility classes */
 </style>

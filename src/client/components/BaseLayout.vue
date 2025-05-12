@@ -1,7 +1,7 @@
 <template>
-  <div class="app-container">
+  <div class="flex flex-col min-h-screen">
     <AppHeader />
-    <main class="container">
+    <main class="container flex-1 py-6">
       <slot></slot>
     </main>
     <AppFooter />
@@ -22,16 +22,5 @@ export default {
 </script>
 
 <style scoped>
-.app-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 15px;
-  flex: 1;
-}
+/* All styles have been replaced with Tailwind utility classes */
 </style>
