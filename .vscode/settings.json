@@ -1,0 +1,7 @@
+{
+    "amp.commands.allowlist": [
+        "npm install -D @playwright/test",
+        "npx playwright install --with-deps chromium",
+        "node tests/code-verification.js"
+    ]
+}

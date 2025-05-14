@@ -215,6 +215,7 @@ export default {
   },
   data() {
     return {
+      refreshInterval: null, // For auto-refresh of task data
       task: {},
       project: {},
       projectTasks: [], // Other tasks in the same project
@@ -255,13 +256,53 @@ export default {
       if (parseInt(newId) !== this.currentTaskId) {
         this.fetchTask()
       }
+    },
+    '$route.path': function(newPath) {
+      // Handle edit mode when URL changes to edit path
+      this.isEditMode = newPath.includes('/edit')
+      if (this.isEditMode && this.task.id) {
+        this.populateEditForm()
+      }
+      
+      // Handle refresh interval based on edit mode
+      this.handleRefreshInterval()
+    },
+    isEditMode: function(newVal) {
+      // Handle refresh interval when edit mode changes
+      this.handleRefreshInterval()
     }
   },
   created() {
     this.fetchTask()
     this.fetchUsers()
+    
+    // Set up auto-refresh interval
+    this.handleRefreshInterval()
+  },
+  
+  beforeDestroy() {
+    // Clean up refresh interval when component is destroyed
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval)
+    }
   },
   methods: {
+    // Handle refresh interval based on edit mode
+    handleRefreshInterval() {
+      // Clear any existing interval
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval)
+        this.refreshInterval = null
+      }
+      
+      // Set up new interval if not in edit mode
+      if (!this.isEditMode) {
+        this.refreshInterval = setInterval(() => {
+          this.fetchTask()
+        }, 30000) // 30 seconds refresh interval
+      }
+    },
+    
     async fetchTask() {
       this.loading = true
       this.error = null
@@ -498,6 +539,9 @@ export default {
         
         // Exit edit mode
         this.isEditMode = false
+        
+        // Refresh task data to ensure UI is up-to-date
+        await this.fetchTask()
         
         // Show success message
         alert('Task updated successfully')

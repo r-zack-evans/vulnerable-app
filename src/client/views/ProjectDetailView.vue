@@ -534,6 +534,7 @@ export default {
       error: null,
       tasksLoading: true,
       tasksError: null,
+      refreshInterval: null, // For auto-refresh of project and tasks data
       showDeleteConfirm: false,
       isEditMode: false,
       editForm: {
@@ -609,6 +610,13 @@ export default {
       if (this.isEditMode && this.project.id) {
         this.populateEditForm()
       }
+      
+      // Handle refresh interval based on edit mode
+      this.handleRefreshInterval()
+    },
+    isEditMode: function(newVal) {
+      // Handle refresh interval when edit mode changes
+      this.handleRefreshInterval()
     },
     'tasks': {
       deep: true,
@@ -619,6 +627,23 @@ export default {
     }
   },
   methods: {
+    // Handle refresh interval creation/destruction based on edit mode
+    handleRefreshInterval() {
+      // Clear any existing interval
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval)
+        this.refreshInterval = null
+      }
+      
+      // Set up new interval if not in edit mode
+      if (!this.isEditMode) {
+        this.refreshInterval = setInterval(() => {
+          this.fetchProject()
+          this.fetchTasks()
+        }, 30000) // 30 seconds refresh interval
+      }
+    },
+    
     // Get team member IDs as an array of numbers
     getTeamMemberIds() {
       if (!this.project.teamMembers) {
@@ -955,6 +980,9 @@ export default {
         await axios.put(`/tasks/${taskId}`, taskData)
         console.log(`Task ${taskId} status changed from ${oldStatus} to ${newStatus}`)
         
+        // Refresh all tasks to ensure UI is up-to-date
+        await this.fetchTasks()
+        
         // Update project completion percentage
         this.updateProjectCompletion()
       } catch (error) {
@@ -1104,6 +1132,9 @@ export default {
         
         // Navigate back to view mode
         this.$router.push(`/projects/${this.projectId}`)
+        
+        // Refresh tasks to ensure UI is up-to-date
+        this.fetchTasks()
       } catch (error) {
         console.error('Error saving project:', error)
         // VULNERABILITY: Showing error message with potential internal details
@@ -1256,6 +1287,9 @@ export default {
         
         this.closeTaskModal()
         
+        // Refresh tasks to ensure UI is up-to-date
+        this.fetchTasks()
+        
         // Update the project completion percentage
         this.updateProjectCompletion()
       } catch (error) {
@@ -1270,8 +1304,8 @@ export default {
         // VULNERABILITY: Direct axios call and string concatenation
         await axios.delete(`/tasks/${taskId}`)
         
-        // Remove the task from the local list
-        this.tasks = this.tasks.filter(t => t.id !== taskId)
+        // Refresh all tasks to ensure UI is up-to-date
+        await this.fetchTasks()
         
         // Update the project completion percentage
         this.updateProjectCompletion()
@@ -1279,6 +1313,12 @@ export default {
         console.error('Error deleting task:', error)
         this.tasksError = 'Failed to delete task. Please try again.'
       }
+    }
+  },
+  beforeDestroy() {
+    // Clean up refresh interval when component is destroyed
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval)
     }
   },
   created() {
@@ -1295,6 +1335,9 @@ export default {
     if (this.isEditMode) {
       this.fetchUsers()
     }
+    
+    // Set up auto-refresh interval
+    this.handleRefreshInterval()
     
     // Force update completion percentage when component is mounted
     this.$nextTick(() => {
