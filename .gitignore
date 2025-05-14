@@ -3,3 +3,6 @@ dist/
 coverage/
 .env
 vuln_app.sqlite
+test-results/
+*.log
+.DS_Store
