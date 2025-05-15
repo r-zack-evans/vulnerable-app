@@ -1,6 +1,7 @@
 import express from 'express';
 import { getRepository } from 'typeorm';
 import { Task } from '../entity/Task';
+import { TaskAssignment } from '../entity/TaskAssignment';
 
 const router = express.Router();
 
@@ -131,7 +132,17 @@ router.patch('/:id/assign', async (req, res) => {
     }
     
     // VULNERABILITY: No validation if the user exists
-    task.assignedTo = userId;
+    // Create a task assignment in the assignment table instead
+    const assignmentRepository = getRepository(TaskAssignment);
+    
+    // Remove any existing assignments for this task
+    await assignmentRepository.delete({ taskId: task.id });
+    
+    // Create a new assignment
+    await assignmentRepository.save({
+      taskId: task.id,
+      userId: userId
+    });
     
     await taskRepository.save(task);
     res.json(task);

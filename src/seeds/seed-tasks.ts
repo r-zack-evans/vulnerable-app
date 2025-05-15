@@ -59,10 +59,10 @@ function getUsersByRole(role: string, callback: (users: {id: number, username: s
 function createSampleProjects(callback: () => void): void {
   console.log('Creating sample projects...');
   
-  // Get project managers to assign as project owners
-  getUsersByRole('project_manager', (projectManagers) => {
+  // Get product managers to assign as project owners
+  getUsersByRole('product_manager', (projectManagers) => {
     if (projectManagers.length === 0) {
-      console.error('No project managers found to assign as project owners');
+      console.error('No product managers found to assign as project owners');
       callback();
       return;
     }
@@ -365,6 +365,7 @@ function createTasksForProject(projectId: number, projectName: string): void {
   // Function to assign appropriate engineers to tasks based on task content and engineer specialty
   function assignEngineersToTask(task: Task): number[] {
     const assignedEngineers: number[] = [];
+    let additionalEngineers: number[] = [];
     
     // Match engineers based on task title/description and their job title
     if (task.title.includes('API') || task.description.includes('API')) {
@@ -376,6 +377,16 @@ function createTasksForProject(projectId: number, projectName: string): void {
       if (backendDevs.length > 0) {
         // Assign at least one backend developer
         assignedEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+        
+        // For complex API tasks, add another backend developer
+        if ((task.estimatedHours >= 24 || task.priority === 'Critical') && backendDevs.length > 1) {
+          // Get a different backend developer
+          let secondDev;
+          do {
+            secondDev = backendDevs[Math.floor(Math.random() * backendDevs.length)].id;
+          } while (assignedEngineers.includes(secondDev));
+          additionalEngineers.push(secondDev);
+        }
       }
     } else if (task.title.includes('Database') || task.description.includes('Database')) {
       // Find database engineers
@@ -383,6 +394,14 @@ function createTasksForProject(projectId: number, projectName: string): void {
       
       if (dbEngineers.length > 0) {
         assignedEngineers.push(dbEngineers[Math.floor(Math.random() * dbEngineers.length)].id);
+        
+        // For complex database tasks, add a backend developer as well
+        if (task.estimatedHours >= 20 || task.priority === 'Critical' || task.priority === 'High') {
+          const backendDevs = actualEngineers.filter(eng => eng.jobTitle.includes('Backend'));
+          if (backendDevs.length > 0) {
+            additionalEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+          }
+        }
       } else {
         // If no database engineers, assign backend developers
         const backendDevs = actualEngineers.filter(eng => eng.jobTitle.includes('Backend'));
@@ -396,6 +415,14 @@ function createTasksForProject(projectId: number, projectName: string): void {
       
       if (securityEngineers.length > 0) {
         assignedEngineers.push(securityEngineers[Math.floor(Math.random() * securityEngineers.length)].id);
+        
+        // For authentication tasks, also add a backend developer
+        if (task.description.includes('Authentication')) {
+          const backendDevs = actualEngineers.filter(eng => eng.jobTitle.includes('Backend'));
+          if (backendDevs.length > 0) {
+            additionalEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+          }
+        }
       }
     } else if (task.title.includes('Frontend') || task.description.includes('UI') || task.description.includes('UX')) {
       // Find frontend developers
@@ -403,6 +430,15 @@ function createTasksForProject(projectId: number, projectName: string): void {
       
       if (frontendDevs.length > 0) {
         assignedEngineers.push(frontendDevs[Math.floor(Math.random() * frontendDevs.length)].id);
+        
+        // For larger UI tasks, add another frontend developer
+        if (task.estimatedHours >= 30 && frontendDevs.length > 1) {
+          let secondDev;
+          do {
+            secondDev = frontendDevs[Math.floor(Math.random() * frontendDevs.length)].id;
+          } while (assignedEngineers.includes(secondDev));
+          additionalEngineers.push(secondDev);
+        }
       }
     } else if (task.title.includes('Test') || task.description.includes('Test') || task.description.includes('QA')) {
       // Find QA engineers
@@ -411,6 +447,20 @@ function createTasksForProject(projectId: number, projectName: string): void {
       if (qaEngineers.length > 0) {
         assignedEngineers.push(qaEngineers[Math.floor(Math.random() * qaEngineers.length)].id);
       }
+    } else if (task.title.includes('Architecture') || task.description.includes('Architecture')) {
+      // Assign System Engineers or Software Engineers for architecture tasks
+      const sysEngineers = actualEngineers.filter(eng => 
+        eng.jobTitle.includes('Systems Engineer') || 
+        eng.jobTitle === 'Software Engineer');
+      
+      if (sysEngineers.length > 0) {
+        assignedEngineers.push(sysEngineers[Math.floor(Math.random() * sysEngineers.length)].id);
+      }
+    } else if (task.title.includes('Documentation') || task.description.includes('Documentation')) {
+      // Assign a mix of engineers for documentation tasks
+      // Pick one engineer with expertise in the domain and one general engineer
+      const randomEngineer = actualEngineers[Math.floor(Math.random() * actualEngineers.length)].id;
+      assignedEngineers.push(randomEngineer);
     }
     
     // If no specific engineer was assigned, assign a random engineer
@@ -418,7 +468,19 @@ function createTasksForProject(projectId: number, projectName: string): void {
       assignedEngineers.push(actualEngineers[Math.floor(Math.random() * actualEngineers.length)].id);
     }
     
-    return assignedEngineers;
+    // For high priority or complex tasks, ensure we have at least one more engineer
+    if (additionalEngineers.length === 0 && 
+        (task.priority === 'Critical' || task.estimatedHours >= 40)) {
+      const availableEngineers = actualEngineers.filter(eng => 
+        !assignedEngineers.includes(eng.id));
+      
+      if (availableEngineers.length > 0) {
+        additionalEngineers.push(availableEngineers[Math.floor(Math.random() * availableEngineers.length)].id);
+      }
+    }
+    
+    // Combine assigned engineers and remove duplicates
+    return [...new Set([...assignedEngineers, ...additionalEngineers])];
   }
   
   // Insert tasks into database
