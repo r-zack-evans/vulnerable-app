@@ -6,8 +6,9 @@ export default defineConfig({
   plugins: [vue()],
   root: 'src/client',
   build: {
+    // Output directly to dist/public
     outDir: '../../dist/public',
-    emptyOutDir: true,
+    emptyOutDir: false, // Don't empty the dist folder
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'src/client/index.html')

@@ -70,6 +70,8 @@ export default {
   methods: {
     logout() {
       // Implement logout logic here
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
       this.user = null
       console.log('User logged out')
       this.$router.push('/login')
@@ -87,6 +89,26 @@ export default {
     },
     toggleMobileMenu() {
       this.showMobileMenu = !this.showMobileMenu
+    },
+    checkUserStatus() {
+      // Check for user in localStorage
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser)
+          
+          // Only update if different to avoid unnecessary re-renders
+          if (!this.user || this.user.id !== parsedUser.id) {
+            console.log('Updating user from localStorage:', parsedUser)
+            this.user = parsedUser
+          }
+        } catch (e) {
+          console.error('Failed to parse stored user during status check:', e)
+        }
+      } else if (this.user) {
+        // User was logged in but now storage is empty
+        this.user = null
+      }
     }
   },
   created() {
@@ -96,6 +118,7 @@ export default {
     if (storedUser) {
       try {
         this.user = JSON.parse(storedUser)
+        console.log('User loaded from localStorage:', this.user)
       } catch (e) {
         console.error('Failed to parse stored user')
       }
@@ -103,10 +126,19 @@ export default {
     
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.dropdown')) {
+      if (!e.target.closest('.dropdown') && !e.target.closest('a[href="#"]')) {
         this.showDropdown = false
       }
     })
+    
+    // Add event listener for storage changes to detect login/logout
+    window.addEventListener('storage', this.checkUserStatus)
+    
+    // Also check user status every few seconds
+    setInterval(this.checkUserStatus, 3000)
+    
+    // Initial check
+    this.checkUserStatus()
   }
 }
 </script>

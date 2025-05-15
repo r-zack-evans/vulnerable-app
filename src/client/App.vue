@@ -34,5 +34,5 @@ export default {
 /* Global styles with Tailwind classes */
 /* Note: Most of these styles are replaced by Tailwind utility classes */
 
-/* We'll define these component classes in a separate CSS file to allow Tailwind to process them properly */
+/* All Tailwind styles are imported via src/client/styles.css */
 </style>

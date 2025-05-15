@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Project } from './Project';
 
-@Entity()
+@Entity('task')
 export class Task {
   @PrimaryGeneratedColumn()
   id: number;
@@ -14,33 +15,25 @@ export class Task {
   @Column()
   projectId: number;
 
+  @ManyToOne(() => Project)
+  @JoinColumn({ name: 'projectId' })
+  project: Project;
+
   @Column({ default: 'Not Started' })
   status: string; // 'Not Started', 'In Progress', 'Complete', 'On Hold'
 
-  @Column({ nullable: true, type: 'date' })
-  dueDate: Date;
-
-  @Column({ nullable: true })
-  assignedTo: number; // User ID
-
   @Column({ nullable: true })
   priority: string; // 'Low', 'Medium', 'High', 'Critical'
+  
+  @Column({ nullable: true })
+  dueDate: string;
 
-  @Column({ nullable: true, type: 'integer' })
+  @Column({ nullable: true, default: 0 })
   estimatedHours: number;
 
-  @Column({ nullable: true, type: 'integer' })
+  @Column({ nullable: true, default: 0 })
   actualHours: number;
 
-  @Column({ nullable: true })
-  parentTaskId: number; // For subtasks
-
   @Column({ default: 0 })
-  order: number; // For ordering tasks in a list
-
-  @Column('simple-array', { nullable: true })
-  dependsOn: number[]; // Task IDs this task depends on - VULNERABILITY: no validation
-
-  @Column({ default: false })
   isCompleted: boolean;
 }

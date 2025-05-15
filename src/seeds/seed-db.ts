@@ -3,6 +3,7 @@ const { Database } = sqlite3.verbose();
 
 // Import the seedUsers function
 import seedUsers from './seed-users';
+import './seed-tasks';
 
 // Define types for project and task data
 interface Project {
@@ -122,6 +123,18 @@ function clearAndSeedData(db: sqlite3.Database): void {
 
 // Create sample projects
 function createProjects(db: sqlite3.Database): void {
+  // Get product managers to assign as project owners
+  db.all("SELECT id, username FROM user WHERE role = 'product_manager'", (err, productManagers: {id: number, username: string}[]) => {
+    if (err) {
+      console.error('Error fetching product managers:', err);
+      return;
+    }
+    
+    if (productManagers.length === 0) {
+      console.error('No product managers found to assign as project owners');
+      return;
+    }
+  
   // Sample project data
   const projects: Project[] = [
     {
@@ -131,8 +144,8 @@ function createProjects(db: sqlite3.Database): void {
       endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'In Progress',
       completionPercentage: 25,
-      ownerId: 3, // dev_lead
-      managerId: 2 // project_manager
+      ownerId: productManagers[0].id, // Assigned product manager as owner
+      managerId: null // No separate manager needed
     },
     {
       name: 'Database Upgrade to PostgreSQL 14',
@@ -141,8 +154,8 @@ function createProjects(db: sqlite3.Database): void {
       endDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'Not Started',
       completionPercentage: 0,
-      ownerId: 1, // admin_user
-      managerId: 2 // project_manager
+      ownerId: productManagers[1 % productManagers.length].id, // Assigned next product manager as owner
+      managerId: null // No separate manager needed
     },
     {
       name: 'Third-Party Payment Integration',
@@ -151,7 +164,7 @@ function createProjects(db: sqlite3.Database): void {
       endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: 'In Progress',
       completionPercentage: 40,
-      ownerId: 2, // project_manager
+      ownerId: productManagers[2 % productManagers.length].id, // Assigned next product manager as owner
       clientId: 5 // client_user
     }
   ];
@@ -207,6 +220,8 @@ function createProjects(db: sqlite3.Database): void {
       projectStmt.finalize();
     }
   });
+  
+  });
 }
 
 // Get engineers by job title, returns a list of user IDs
@@ -245,6 +260,7 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
     }
     
     let assignedEngineers: number[] = [];
+    let additionalEngineers: number[] = [];
     
     // Match engineers based on task content and their job title
     if (task.title.includes('API') || task.description.includes('API')) {
@@ -255,6 +271,16 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       
       if (backendDevs.length > 0) {
         assignedEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+        
+        // For complex API tasks, add another backend developer
+        if ((task.estimatedHours >= 24 || task.priority === 'Critical') && backendDevs.length > 1) {
+          // Get a different backend developer
+          let secondDev;
+          do {
+            secondDev = backendDevs[Math.floor(Math.random() * backendDevs.length)].id;
+          } while (assignedEngineers.includes(secondDev));
+          additionalEngineers.push(secondDev);
+        }
       }
     } else if (task.title.includes('Database') || task.description.includes('Database')) {
       // Find database engineers
@@ -262,6 +288,14 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       
       if (dbEngineers.length > 0) {
         assignedEngineers.push(dbEngineers[Math.floor(Math.random() * dbEngineers.length)].id);
+        
+        // For complex database tasks, add a backend developer as well
+        if (task.estimatedHours >= 20 || task.priority === 'Critical' || task.priority === 'High') {
+          const backendDevs = engineers.filter(eng => eng.jobTitle.includes('Backend'));
+          if (backendDevs.length > 0) {
+            additionalEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+          }
+        }
       } else {
         // If no database engineers, assign backend developers
         const backendDevs = engineers.filter(eng => eng.jobTitle.includes('Backend'));
@@ -275,6 +309,14 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       
       if (securityEngineers.length > 0) {
         assignedEngineers.push(securityEngineers[Math.floor(Math.random() * securityEngineers.length)].id);
+        
+        // For authentication tasks, also add a backend developer
+        if (task.description.includes('Authentication')) {
+          const backendDevs = engineers.filter(eng => eng.jobTitle.includes('Backend'));
+          if (backendDevs.length > 0) {
+            additionalEngineers.push(backendDevs[Math.floor(Math.random() * backendDevs.length)].id);
+          }
+        }
       }
     } else if (task.title.includes('Frontend') || task.description.includes('UI') || task.description.includes('UX')) {
       // Find frontend developers
@@ -282,6 +324,15 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       
       if (frontendDevs.length > 0) {
         assignedEngineers.push(frontendDevs[Math.floor(Math.random() * frontendDevs.length)].id);
+        
+        // For larger UI tasks, add another frontend developer
+        if (task.estimatedHours >= 30 && frontendDevs.length > 1) {
+          let secondDev;
+          do {
+            secondDev = frontendDevs[Math.floor(Math.random() * frontendDevs.length)].id;
+          } while (assignedEngineers.includes(secondDev));
+          additionalEngineers.push(secondDev);
+        }
       }
     } else if (task.title.includes('Test') || task.description.includes('Test') || task.description.includes('QA')) {
       // Find QA engineers
@@ -290,6 +341,15 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       if (qaEngineers.length > 0) {
         assignedEngineers.push(qaEngineers[Math.floor(Math.random() * qaEngineers.length)].id);
       }
+    } else if (task.title.includes('Architecture') || task.description.includes('Architecture')) {
+      // Assign System Engineers or Software Engineers for architecture tasks
+      const sysEngineers = engineers.filter(eng => 
+        eng.jobTitle.includes('Systems Engineer') || 
+        eng.jobTitle === 'Software Engineer');
+      
+      if (sysEngineers.length > 0) {
+        assignedEngineers.push(sysEngineers[Math.floor(Math.random() * sysEngineers.length)].id);
+      }
     }
     
     // If no specific engineer was assigned, assign a random engineer
@@ -297,8 +357,22 @@ function assignEngineersToTask(db: sqlite3.Database, taskId: number, task: Task)
       assignedEngineers.push(engineers[Math.floor(Math.random() * engineers.length)].id);
     }
     
+    // For high priority or complex tasks, ensure we have at least one more engineer
+    if (additionalEngineers.length === 0 && 
+        (task.priority === 'Critical' || task.estimatedHours >= 40)) {
+      const availableEngineers = engineers.filter(eng => 
+        !assignedEngineers.includes(eng.id));
+      
+      if (availableEngineers.length > 0) {
+        additionalEngineers.push(availableEngineers[Math.floor(Math.random() * availableEngineers.length)].id);
+      }
+    }
+    
+    // Combine assigned engineers and remove duplicates
+    const finalAssignedEngineers = [...new Set([...assignedEngineers, ...additionalEngineers])];
+    
     // Create task assignments for each assigned engineer
-    assignedEngineers.forEach(engId => {
+    finalAssignedEngineers.forEach(engId => {
       db.run(
         'INSERT INTO task_assignment (taskId, userId) VALUES (?, ?)',
         [taskId, engId],

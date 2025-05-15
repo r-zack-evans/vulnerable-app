@@ -28,41 +28,44 @@ router.get('/', async (req, res) => {
         }
       }
       
-      // 2. Add team member information
-      if (project.teamMembers && project.teamMembers.length > 0) {
-        // Convert to array if it's a string (from simple-array column type)
-        const memberIds = Array.isArray(project.teamMembers) 
-          ? project.teamMembers 
-          : (project.teamMembers as string).split(',').map(id => parseInt(id.trim()));
+      // 2. Get team members from task assignments instead
+      try {
+        // Look up team members through task assignments
+        const taskRepository = getRepository(Task);
+        const tasks = await taskRepository.find({ where: { projectId: project.id } });
         
-        // Create team member details array
+        // Get unique user IDs from tasks
+        const uniqueUserIds = new Set<number>();
+        const taskAssignments = await getRepository('task_assignment')
+          .createQueryBuilder('ta')
+          .where('ta.taskId IN (:...taskIds)', { taskIds: tasks.map(t => t.id) })
+          .leftJoinAndSelect('ta.user', 'user')
+          .getMany();
+        
+        // Extract user information
         const teamMembersDetails = [];
-        
-        // Fetch details for each team member (limit to 5 for performance in list view)
-        const limitedMemberIds = memberIds.slice(0, 5);
-        for (const memberId of limitedMemberIds) {
-          if (!memberId) continue; // Skip invalid IDs
-          
-          const member = await userRepository.findOne({ where: { id: memberId } });
-          if (member) {
-            // Include only non-sensitive information
+        for (const assignment of taskAssignments) {
+          if (assignment.user && !uniqueUserIds.has(assignment.user.id)) {
+            uniqueUserIds.add(assignment.user.id);
             teamMembersDetails.push({
-              id: member.id,
-              username: member.username,
-              department: member.department,
-              jobTitle: member.jobTitle
+              id: assignment.user.id,
+              username: assignment.user.username,
+              department: assignment.user.department,
+              jobTitle: assignment.user.jobTitle
             });
           }
         }
         
-        // Add count of additional members not shown
-        const additionalCount = Math.max(0, memberIds.length - 5);
+        // Only show up to 5 team members in list view
+        const limitedMembersDetails = teamMembersDetails.slice(0, 5);
+        const additionalCount = Math.max(0, teamMembersDetails.length - 5);
         
-        // Replace the IDs array with the detailed information
-        project.teamMembersDetails = teamMembersDetails;
-        project.teamMembersCount = memberIds.length;
+        // Add team member information to project
+        project.teamMembersDetails = limitedMembersDetails;
+        project.teamMembersCount = teamMembersDetails.length;
         project.additionalMembersCount = additionalCount;
-      } else {
+      } catch (error) {
+        console.error(`Error fetching team members for project ${project.id}:`, error);
         project.teamMembersDetails = [];
         project.teamMembersCount = 0;
         project.additionalMembersCount = 0;
@@ -101,34 +104,39 @@ router.get('/:id', async (req, res) => {
       }
     }
     
-    // 2. Add team member information
-    if (project.teamMembers && project.teamMembers.length > 0) {
-      // Convert to array if it's a string (from simple-array column type)
-      const memberIds = Array.isArray(project.teamMembers) 
-        ? project.teamMembers 
-        : (project.teamMembers as string).split(',').map(id => parseInt(id.trim()));
+    // 2. Get team members from task assignments
+    try {
+      // Look up team members through task assignments
+      const taskRepository = getRepository(Task);
+      const tasks = await taskRepository.find({ where: { projectId: project.id } });
       
-      // Create team member details array
+      // Get unique user IDs from tasks
+      const uniqueUserIds = new Set<number>();
+      const taskAssignments = await getRepository('task_assignment')
+        .createQueryBuilder('ta')
+        .where('ta.taskId IN (:...taskIds)', { taskIds: tasks.map(t => t.id) })
+        .leftJoinAndSelect('ta.user', 'user')
+        .getMany();
+      
+      // Extract user information
       const teamMembersDetails = [];
-      
-      // Fetch details for each team member
-      for (const memberId of memberIds) {
-        if (!memberId) continue; // Skip invalid IDs
-        
-        const member = await userRepository.findOne({ where: { id: memberId } });
-        if (member) {
-          // Include only non-sensitive information
+      for (const assignment of taskAssignments) {
+        if (assignment.user && !uniqueUserIds.has(assignment.user.id)) {
+          uniqueUserIds.add(assignment.user.id);
           teamMembersDetails.push({
-            id: member.id,
-            username: member.username,
-            department: member.department,
-            jobTitle: member.jobTitle
+            id: assignment.user.id,
+            username: assignment.user.username,
+            department: assignment.user.department,
+            jobTitle: assignment.user.jobTitle
           });
         }
       }
       
-      // Replace the IDs array with the detailed information
+      // Add team member information to project
       project.teamMembersDetails = teamMembersDetails;
+    } catch (error) {
+      console.error(`Error fetching team members for project ${project.id}:`, error);
+      project.teamMembersDetails = [];
     }
     
     res.json(project);
@@ -161,35 +169,8 @@ router.post('/', async (req, res) => {
       }
     }
     
-    // 2. Team member information
-    if (savedProject.teamMembers && savedProject.teamMembers.length > 0) {
-      // Convert to array if it's a string (from simple-array column type)
-      const memberIds = Array.isArray(savedProject.teamMembers) 
-        ? savedProject.teamMembers 
-        : (savedProject.teamMembers as string).split(',').map(id => parseInt(id.trim()));
-      
-      // Create team member details array
-      const teamMembersDetails = [];
-      
-      // Fetch details for each team member
-      for (const memberId of memberIds) {
-        if (!memberId) continue; // Skip invalid IDs
-        
-        const member = await userRepository.findOne({ where: { id: memberId } });
-        if (member) {
-          // Include only non-sensitive information
-          teamMembersDetails.push({
-            id: member.id,
-            username: member.username,
-            department: member.department,
-            jobTitle: member.jobTitle
-          });
-        }
-      }
-      
-      // Replace the IDs array with the detailed information
-      savedProject.teamMembersDetails = teamMembersDetails;
-    }
+    // New projects won't have team members yet since they need to be associated via tasks
+    savedProject.teamMembersDetails = [];
     
     res.status(201).json(savedProject);
   } catch (error) {
@@ -223,34 +204,39 @@ router.put('/:id', async (req, res) => {
       }
     }
     
-    // 2. Add team member information
-    if (updatedProject.teamMembers && updatedProject.teamMembers.length > 0) {
-      // Convert to array if it's a string (from simple-array column type)
-      const memberIds = Array.isArray(updatedProject.teamMembers) 
-        ? updatedProject.teamMembers 
-        : (updatedProject.teamMembers as string).split(',').map(id => parseInt(id.trim()));
+    // 2. Get team members from task assignments
+    try {
+      // Look up team members through task assignments
+      const taskRepository = getRepository(Task);
+      const tasks = await taskRepository.find({ where: { projectId: updatedProject.id } });
       
-      // Create team member details array
+      // Get unique user IDs from tasks
+      const uniqueUserIds = new Set<number>();
+      const taskAssignments = await getRepository('task_assignment')
+        .createQueryBuilder('ta')
+        .where('ta.taskId IN (:...taskIds)', { taskIds: tasks.map(t => t.id) })
+        .leftJoinAndSelect('ta.user', 'user')
+        .getMany();
+      
+      // Extract user information
       const teamMembersDetails = [];
-      
-      // Fetch details for each team member
-      for (const memberId of memberIds) {
-        if (!memberId) continue; // Skip invalid IDs
-        
-        const member = await userRepository.findOne({ where: { id: memberId } });
-        if (member) {
-          // Include only non-sensitive information
+      for (const assignment of taskAssignments) {
+        if (assignment.user && !uniqueUserIds.has(assignment.user.id)) {
+          uniqueUserIds.add(assignment.user.id);
           teamMembersDetails.push({
-            id: member.id,
-            username: member.username,
-            department: member.department,
-            jobTitle: member.jobTitle
+            id: assignment.user.id,
+            username: assignment.user.username,
+            department: assignment.user.department,
+            jobTitle: assignment.user.jobTitle
           });
         }
       }
       
-      // Replace the IDs array with the detailed information
+      // Add team member information to project
       updatedProject.teamMembersDetails = teamMembersDetails;
+    } catch (error) {
+      console.error(`Error fetching team members for project ${updatedProject.id}:`, error);
+      updatedProject.teamMembersDetails = [];
     }
     
     res.json(updatedProject);

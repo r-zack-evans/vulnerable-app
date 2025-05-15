@@ -1,7 +1,7 @@
 // Simple script to reset the database and rebuild the schema
-const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+import fs from 'fs';
+import sqlite3 from 'sqlite3';
+import path from 'path';
 
 // Path to the database file
 const dbPath = path.join(__dirname, 'vuln_app.sqlite');

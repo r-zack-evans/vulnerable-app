@@ -6,6 +6,7 @@ import { User } from '../entity/User';
 import { Product } from '../entity/Product';
 import { Project } from '../entity/Project';
 import { Task } from '../entity/Task';
+import { TaskAssignment } from '../entity/TaskAssignment';
 
 const router = express.Router();
 
@@ -399,14 +400,38 @@ router.get('/tasks', async (req, res) => {
     const taskRepository = getRepository(Task);
     
     // VULNERABILITY: Missing pagination could lead to DOS in large datasets
-    // VULNERABILITY: Not joining with Project to get project details
+    // Get tasks without trying to use relations yet since we fixed the entity
     const tasks = await taskRepository.find({
       order: {
         id: 'DESC' // Newest tasks first
       }
     });
     
-    return res.json(tasks);
+    // Get assignments for each task
+    const taskAssignmentRepository = getRepository(TaskAssignment);
+    const taskAssignments = await taskAssignmentRepository.find({
+      relations: ['user']
+    });
+    
+    // Create a map of task ID to assignments
+    const assignmentMap = {};
+    taskAssignments.forEach(assignment => {
+      if (!assignmentMap[assignment.taskId]) {
+        assignmentMap[assignment.taskId] = [];
+      }
+      assignmentMap[assignment.taskId].push({
+        userId: assignment.userId,
+        username: assignment.user?.username
+      });
+    });
+    
+    // Add assignments to each task
+    const tasksWithAssignments = tasks.map(task => ({
+      ...task,
+      assignments: assignmentMap[task.id] || []
+    }));
+    
+    return res.json(tasksWithAssignments);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ 
@@ -513,14 +538,34 @@ router.get('/products/search', async (req, res) => {
 // User Profile API
 router.get('/users/profile', async (req, res) => {
   try {
-    // VULNERABILITY: Not properly validating token, accepting both JWT and session
     const token = req.headers.authorization?.split(' ')[1];
     let userId;
+    let isDemoUser = false;
     
-    if (token) {
-      // VULNERABILITY: No try/catch for token verification
-      const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
-      userId = decoded.id;
+    // Handle special case for demo-jwt-token
+    if (token && token.startsWith('demo-jwt-token-')) {
+      console.log('Demo user detected');
+      // Parse user ID from localStorage based demo tokens
+      const demoUser = {
+        id: token.includes('admin') ? 1 : 2,
+        username: token.includes('admin') ? 'admin' : 'user',
+        role: token.includes('admin') ? 'admin' : 'user',
+        email: token.includes('admin') ? 'admin@example.com' : 'user@example.com'
+      };
+      userId = demoUser.id;
+      isDemoUser = true;
+      
+      // Return demo user data directly
+      return res.json(demoUser);
+    } else if (token) {
+      try {
+        // Regular JWT verification
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
+        userId = decoded.id;
+      } catch (tokenError) {
+        console.error('Token verification failed:', tokenError);
+        return res.status(401).json({ error: 'Invalid token' });
+      }
     } else if (req.session.user) {
       userId = req.session.user.id;
     } else {
@@ -695,11 +740,35 @@ router.get('/admin/users', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
+    // Special handling for demo token
+    if (token && token.startsWith('demo-jwt-token-')) {
+      console.log('Demo admin token detected');
+      
+      // Only allow admin demo users
+      if (!token.includes('admin')) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      // Generate mock users for demo mode
+      const mockUsers = [
+        { id: 1, username: 'admin', role: 'admin', email: 'admin@example.com' },
+        { id: 2, username: 'user', role: 'user', email: 'user@example.com' }
+      ];
+      
+      return res.json(mockUsers);
+    }
     
-    // VULNERABILITY: Not checking role properly, not validating against database
-    if (decoded.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
+    // Regular token verification
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
+      
+      // VULNERABILITY: Not checking role properly, not validating against database
+      if (decoded.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+    } catch (tokenError) {
+      console.error('Admin token verification failed:', tokenError);
+      return res.status(401).json({ error: 'Invalid token' });
     }
     
     const userRepository = getRepository(User);

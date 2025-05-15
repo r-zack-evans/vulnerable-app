@@ -77,17 +77,36 @@ export default {
     // Check for any message parameters
     const urlParams = new URLSearchParams(window.location.search)
     
-    // VULNERABILITY: Reflected XSS potential by directly using URL parameters
+    // Safely use URL parameters
     if (urlParams.has('message')) {
-      this.message = urlParams.get('message')
+      // Sanitize message to prevent XSS
+      const sanitizedMessage = urlParams.get('message')?.replace(/[<>]/g, '')
+      if (sanitizedMessage) {
+        this.message = sanitizedMessage
+      }
     }
     
-    // VULNERABILITY: Reflected XSS through notification parameter
+    // Check for notifications
     if (urlParams.has('notification')) {
-      this.notification = urlParams.get('notification')
+      // Sanitize notification to prevent XSS
+      const sanitizedNotification = urlParams.get('notification')?.replace(/[<>]/g, '')
+      if (sanitizedNotification) {
+        this.notification = sanitizedNotification
+      }
     }
     
-    // Check if user is authenticated and load profile
+    // Check if user is logged in via localStorage directly
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        // We already have user data in localStorage
+        console.log('User found in localStorage')
+      } catch (e) {
+        console.error('Failed to parse stored user', e)
+      }
+    }
+    
+    // Also try to load user profile via store if authenticated
     if (this.authStore.isAuthenticated) {
       this.authStore.fetchUserProfile()
     }

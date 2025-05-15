@@ -222,7 +222,7 @@ function createUsers(db: sqlite3.Database): void {
 
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'robert@example.com',
-      role: 'project_manager',  // Changed to project_manager role
+      role: 'product_manager',  // Changed to product_manager role
       department: 'Project Management',
       jobTitle: 'Technical Project Manager',
       isVerified: true,
@@ -233,7 +233,7 @@ function createUsers(db: sqlite3.Database): void {
 
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'jennifer@example.com',
-      role: 'project_manager',  // Changed to project_manager role
+      role: 'product_manager',  // Changed to product_manager role
       department: 'Project Management',
       jobTitle: 'Agile Project Manager',
       isVerified: true,
@@ -244,7 +244,7 @@ function createUsers(db: sqlite3.Database): void {
 
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'william@example.com',
-      role: 'project_manager',  // Changed to project_manager role
+      role: 'product_manager',  // Changed to product_manager role
       department: 'Project Management',
       jobTitle: 'Program Manager',
       isVerified: true,
@@ -255,7 +255,7 @@ function createUsers(db: sqlite3.Database): void {
 
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'emily@example.com',
-      role: 'project_manager',  // Changed to project_manager role
+      role: 'product_manager',  // Changed to product_manager role
       department: 'Project Management',
       jobTitle: 'Project Owner',
       isVerified: true,
@@ -266,7 +266,7 @@ function createUsers(db: sqlite3.Database): void {
 
       passwordHash: '$2b$10$rBtRG.joMIfVKKWKPmwkJ.d0JD3bRnVJG9k5UHRqfJ2eb9y5H9BZG',
       email: 'daniel@example.com',
-      role: 'project_manager',  // Changed to project_manager role
+      role: 'product_manager',  // Changed to product_manager role
       department: 'Project Management',
       jobTitle: 'Scrum Master',
       isVerified: true,
